@@ -1,0 +1,27 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  @apply bg-brume-academique text-encre-nocturne font-sans antialiased;
+}
+
+h1, h2, h3, .font-display {
+  font-family: "Fraunces", serif;
+}
+
+.tabular {
+  font-family: "IBM Plex Mono", monospace;
+}
+
+/* Zones cliquables >= 44x44px sur mobile (cahier des charges §6) */
+@media (max-width: 767px) {
+  button, a.btn, .tap-target {
+    min-height: 44px;
+  }
+}
+
+.focus-ring:focus-visible {
+  outline: 2px solid #3D5A99;
+  outline-offset: 2px;
+}
