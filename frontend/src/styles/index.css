@@ -1,27 +1,298 @@
+/* ==========================================================================
+   POLICES
+   Le @import doit imperativement preceder toute autre regle CSS (specification
+   CSS) : place apres les directives @tailwind, il est ignore silencieusement
+   par certains navigateurs et les polices ne se chargent pas.
+   `display=swap` affiche le texte immediatement avec une police de secours
+   plutot que de laisser un blanc pendant le telechargement.
+   ========================================================================== */
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap");
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-body {
-  @apply bg-brume-academique text-encre-nocturne font-sans antialiased;
+
+/* ==========================================================================
+   VARIABLES
+   ========================================================================== */
+:root {
+  --entete-hauteur: 64px;
+  --barre-laterale-largeur: 264px;
+  --barre-laterale-reduite: 76px;
 }
 
-h1, h2, h3, .font-display {
-  font-family: "Fraunces", serif;
+/* ==========================================================================
+   BASE
+   ========================================================================== */
+@layer base {
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-ardoise-100 text-encre-900 font-sans antialiased;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    text-rendering: optimizeLegibility;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply font-display text-encre-900;
+    font-optical-sizing: auto;
+  }
+
+  /* Les chiffres alignes verticalement dans les tableaux : sans cela, les
+     colonnes de notes et de pourcentages paraissent bancales. */
+  .tabulaire,
+  .tabular {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
+  }
+
+  ::selection {
+    @apply bg-encre-800 text-white;
+  }
 }
 
-.tabular {
-  font-family: "IBM Plex Mono", monospace;
+/* ==========================================================================
+   COMPOSANTS UTILITAIRES
+   ========================================================================== */
+@layer components {
+  /* Focus visible uniquement au clavier : le contour n'apparait pas au clic
+     souris mais reste present pour la navigation au clavier (WCAG 2.4.7). */
+  .anneau-focus:focus-visible {
+    @apply outline-none ring-2 ring-indigo-600 ring-offset-2 ring-offset-white;
+  }
+
+  /* ==========================================================================
+     SYSTÈME LIQUID GLASS (APPLE STYLE GLASSMORPHISM)
+     ========================================================================== */
+
+  /* Arrière-plan bleu institutionnel ISI pour les pages de formulaires / authentification */
+  .bg-isi-bleu {
+    background: linear-gradient(135deg, #1f3357 0%, #1B2A4A 45%, #101a2f 100%);
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Orbes de lumière décoratifs pour amplifier l'effet de réfraction du verre Liquid Glass */
+  .bg-isi-bleu::before {
+    content: "";
+    position: absolute;
+    top: -15%;
+    right: -10%;
+    width: 450px;
+    height: 450px;
+    background: radial-gradient(circle, rgba(95, 140, 210, 0.3) 0%, rgba(27, 42, 74, 0) 70%);
+    border-radius: 50%;
+    pointer-events: none;
+  }
+
+  .bg-isi-bleu::after {
+    content: "";
+    position: absolute;
+    bottom: -15%;
+    left: -10%;
+    width: 500px;
+    height: 500px;
+    background: radial-gradient(circle, rgba(144, 212, 236, 0.25) 0%, rgba(27, 42, 74, 0) 70%);
+    border-radius: 50%;
+    pointer-events: none;
+  }
+
+  .light {
+    position: absolute;
+    width: 300px;
+    height: 300px;
+    border-radius: 50%;
+    filter: blur(80px);
+    opacity: 0.6;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .light-1 {
+    background: #8FE3F0;
+    top: 10%;
+    left: 10%;
+  }
+
+  .light-2 {
+    background: #FFFFFF;
+    bottom: 10%;
+    right: 10%;
+  }
+
+  /* Cartes et Formulaires en effet Liquid Glass translucide Apple */
+  .carte,
+  .carte-glace,
+  .glass-card {
+    background: rgba(255, 255, 255, 0.10);
+    backdrop-filter: blur(20px) saturate(140%);
+    -webkit-backdrop-filter: blur(20px) saturate(140%);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    box-shadow:
+        0 8px 30px rgba(0, 0, 0, 0.12),
+        inset 0 1px 0 rgba(255, 255, 255, 0.30);
+    border-radius: 20px;
+  }
+
+  /* Formulaire Liquid Glass ultra-translucide Apple */
+  .glass-form {
+    background: rgba(255, 255, 255, 0.14);
+    backdrop-filter: blur(30px) saturate(150%);
+    -webkit-backdrop-filter: blur(30px) saturate(150%);
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    box-shadow:
+        0 25px 60px rgba(0, 0, 0, 0.20),
+        inset 0 1px 0 rgba(255, 255, 255, 0.45);
+    border-radius: 28px;
+  }
+
+  .carte-blanche {
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.92);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border: 1px solid rgba(255, 255, 255, 0.8);
+    box-shadow: 0 4px 20px rgba(19, 30, 54, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  }
+
+  .carte-interactive {
+    transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .carte-interactive:hover {
+    transform: translateY(-3px);
+    box-shadow:
+      0 16px 40px rgba(19, 30, 54, 0.16),
+      inset 0 1px 1px rgba(255, 255, 255, 0.95);
+    border-color: rgba(144, 212, 236, 0.9);
+  }
+
+  /* Inputs de formulaire avec effet verre translucide Liquid Glass */
+  .input-glace,
+  .input-glass {
+    @apply w-full rounded-lg px-3.5 py-2.5 text-sm transition-all duration-200;
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.18);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.15);
+  }
+
+  .input-glace::placeholder,
+  .input-glass::placeholder {
+    color: rgba(255, 255, 255, 0.65);
+  }
+
+  .input-glace:focus,
+  .input-glass:focus {
+    outline: none;
+    background: rgba(255, 255, 255, 0.28);
+    border-color: rgba(255, 255, 255, 0.85);
+    box-shadow:
+      0 0 0 4px rgba(191, 234, 245, 0.3),
+      inset 0 1px 2px rgba(0, 0, 0, 0.1);
+  }
+
+  /* Barre de defilement discrete, coherente entre navigateurs */
+  .defilement-fin {
+    scrollbar-width: thin;
+    scrollbar-color: theme("colors.ardoise.300") transparent;
+  }
+  .defilement-fin::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  .defilement-fin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .defilement-fin::-webkit-scrollbar-thumb {
+    @apply rounded-full bg-ardoise-300;
+  }
+  .defilement-fin::-webkit-scrollbar-thumb:hover {
+    @apply bg-ardoise-400;
+  }
+
+  /* Effet de chargement par balayage lumineux */
+  .squelette {
+    @apply relative overflow-hidden bg-ardoise-200/70;
+  }
+  .squelette::after {
+    content: "";
+    @apply absolute inset-0 -translate-x-full animate-chatoiement;
+    background-image: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.65) 50%,
+      transparent 100%
+    );
+  }
+
+  /* Entree en cascade des elements d'une liste : chaque enfant demarre son
+     animation legerement apres le precedent. */
+  .cascade > * {
+    animation: fondu-montant 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  .cascade > *:nth-child(1) { animation-delay: 0.02s; }
+  .cascade > *:nth-child(2) { animation-delay: 0.06s; }
+  .cascade > *:nth-child(3) { animation-delay: 0.10s; }
+  .cascade > *:nth-child(4) { animation-delay: 0.14s; }
+  .cascade > *:nth-child(5) { animation-delay: 0.18s; }
+  .cascade > *:nth-child(6) { animation-delay: 0.22s; }
+  .cascade > *:nth-child(7) { animation-delay: 0.26s; }
+  .cascade > *:nth-child(8) { animation-delay: 0.30s; }
 }
 
-/* Zones cliquables >= 44x44px sur mobile (cahier des charges §6) */
+/* ==========================================================================
+   ACCESSIBILITE
+   ========================================================================== */
+
+/* Zones tactiles d'au moins 44 x 44 px sur mobile (WCAG 2.5.5) */
 @media (max-width: 767px) {
-  button, a.btn, .tap-target {
+  button,
+  a.btn,
+  .zone-tactile {
     min-height: 44px;
   }
 }
 
-.focus-ring:focus-visible {
-  outline: 2px solid #3D5A99;
-  outline-offset: 2px;
+/* Respect du reglage systeme "reduire les animations" : indispensable pour
+   les personnes sujettes au mal des transports ou aux troubles vestibulaires. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ==========================================================================
+   IMPRESSION
+   Les rapports de prediction sont imprimes pour les conseils de classe.
+   ========================================================================== */
+@media print {
+  .sans-impression {
+    display: none !important;
+  }
+
+  body {
+    @apply bg-white;
+  }
+
+  .carte {
+    @apply border border-ardoise-300 shadow-none;
+    break-inside: avoid;
+  }
 }

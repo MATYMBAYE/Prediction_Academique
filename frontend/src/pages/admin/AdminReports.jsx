@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
-import DashboardLayout from "../../components/DashboardLayout.jsx";
+import CoqueApplication from "../../components/AppShell.jsx";
+import { navigationAdmin } from "../../components/navigation.js";
 import Card from "../../components/Card.jsx";
 import Button from "../../components/Button.jsx";
 import client from "../../api/client.js";
 import { downloadFile } from "../../api/download.js";
-import { ADMIN_NAV_ITEMS } from "./adminNav.jsx";
 import { NIVEAUX } from "../../academic.js";
 
 export default function AdminReports() {
@@ -41,13 +41,12 @@ export default function AdminReports() {
   });
 
   return (
-    <DashboardLayout title="Espace Administration" navItems={ADMIN_NAV_ITEMS}>
-      <h1 className="font-display text-xl font-semibold text-encre-nocturne">Rapports</h1>
-      <p className="mt-1 text-sm text-encre-nocturne/60">
-        Exports pour analyse externe ou archivage (§3.5).
-      </p>
-
-      {error && <p className="mt-3 text-sm text-brique-alerte">{error}</p>}
+    <CoqueApplication
+      titre="Rapports"
+      sousTitre="Exports pour analyse externe ou archivage"
+      sectionsNavigation={navigationAdmin()}
+    >
+      {error && <p className="mt-1 text-sm text-brique-alerte">{error}</p>}
 
       <div className="mt-6 grid gap-4 lg:grid-cols-3">
         <Card title="Rapport de predictions">
@@ -150,6 +149,6 @@ export default function AdminReports() {
           </div>
         </Card>
       </div>
-    </DashboardLayout>
+    </CoqueApplication>
   );
 }

@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import DashboardLayout from "../../components/DashboardLayout.jsx";
+import CoqueApplication from "../../components/AppShell.jsx";
+import { navigationAdmin } from "../../components/navigation.js";
 import Card from "../../components/Card.jsx";
 import client from "../../api/client.js";
-import { ADMIN_NAV_ITEMS } from "./adminNav.jsx";
 
 export default function AdminClassDetail() {
   const { id } = useParams();
@@ -15,17 +15,19 @@ export default function AdminClassDetail() {
 
   if (!classe) {
     return (
-      <DashboardLayout title="Espace Administration" navItems={ADMIN_NAV_ITEMS}>
+      <CoqueApplication titre="Classe" sectionsNavigation={navigationAdmin()}>
         <p className="text-encre-nocturne/60">Chargement...</p>
-      </DashboardLayout>
+      </CoqueApplication>
     );
   }
 
   return (
-    <DashboardLayout title="Espace Administration" navItems={ADMIN_NAV_ITEMS}>
+    <CoqueApplication
+      titre={classe.nom}
+      sousTitre={`${classe.effectif} etudiant(s) · ${classe.filiere}`}
+      sectionsNavigation={navigationAdmin()}
+    >
       <Link to="/admin/classes" className="text-sm text-indigo-trajectoire hover:underline">&larr; Retour aux classes</Link>
-      <h1 className="mt-2 font-display text-xl font-semibold text-encre-nocturne">{classe.nom}</h1>
-      <p className="text-sm text-encre-nocturne/60">{classe.effectif} etudiant(s) · {classe.filiere}</p>
 
       <Card className="mt-6" title="Historique des appels (lecture seule)">
         <div className="overflow-x-auto">
@@ -56,6 +58,6 @@ export default function AdminClassDetail() {
           </table>
         </div>
       </Card>
-    </DashboardLayout>
+    </CoqueApplication>
   );
 }

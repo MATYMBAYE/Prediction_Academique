@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import DashboardLayout from "../../components/DashboardLayout.jsx";
+import CoqueApplication from "../../components/AppShell.jsx";
+import { navigationAdmin } from "../../components/navigation.js";
 import Card from "../../components/Card.jsx";
 import Button from "../../components/Button.jsx";
 import Pagination from "../../components/Pagination.jsx";
@@ -7,7 +8,6 @@ import ConfirmModal from "../../components/ConfirmModal.jsx";
 import { AccountStatusBadge } from "../../components/StatusBadge.jsx";
 import { Link } from "react-router-dom";
 import client from "../../api/client.js";
-import { ADMIN_NAV_ITEMS } from "./adminNav.jsx";
 
 const EMPTY_FORM = { nom: "", prenom: "", identifiant: "", mot_de_passe: "", email: "" };
 
@@ -40,6 +40,12 @@ export default function AdminTeachers() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+
+    if (form.email && !form.email.trim().toLowerCase().endsWith("@groupeisi.com")) {
+      setError("Adresse e-mail invalide. Veuillez utiliser une adresse e-mail institutionnelle se terminant par @groupeisi.com.");
+      return;
+    }
+
     setSubmitting(true);
     try {
       if (editingTeacher) {
@@ -57,6 +63,7 @@ export default function AdminTeachers() {
       setSubmitting(false);
     }
   };
+
 
   const handleEdit = (teacher) => {
     setEditingTeacher(teacher);
@@ -84,9 +91,8 @@ export default function AdminTeachers() {
 
 
   return (
-    <DashboardLayout title="Espace Administration" navItems={ADMIN_NAV_ITEMS}>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="font-display text-xl font-semibold text-encre-nocturne">Enseignants</h1>
+    <CoqueApplication titre="Enseignants" sectionsNavigation={navigationAdmin()}>
+      <div className="flex flex-wrap items-center justify-end gap-3">
         <div className="flex gap-2">
           <input
             type="search"
@@ -133,7 +139,6 @@ export default function AdminTeachers() {
             </div>
           </form>
         </Card>
-      )}
       )}
 
       <div className="mt-6">
@@ -195,7 +200,7 @@ export default function AdminTeachers() {
         onConfirm={handleDelete}
         onCancel={() => setDeleteTeacherId(null)}
       />
-    </DashboardLayout>
+    </CoqueApplication>
   );
 }
 

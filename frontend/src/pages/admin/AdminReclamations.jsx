@@ -1,29 +1,42 @@
+/**
+ * Reclamations — vue d'ensemble administrateur (lecture seule).
+ *
+ * Depuis la refonte du module, les reclamations sont echangees directement
+ * entre l'etudiant et l'enseignant de la matiere concernee ; l'administration
+ * garde uniquement un role de supervision (aucune reponse ni changement de
+ * statut ne doit transiter par ce compte, pour ne pas court-circuiter
+ * l'enseignant responsable).
+ *
+ * Consomme GET /api/admin/reclamations (liste paginee) et
+ * GET /api/admin/reclamations/:id (detail, lecture seule).
+ */
 import { useEffect, useState } from "react";
-import DashboardLayout from "../../components/DashboardLayout.jsx";
-import Card from "../../components/Card.jsx";
-import Button from "../../components/Button.jsx";
+import CoqueApplication from "../../components/AppShell.jsx";
+import { navigationAdmin } from "../../components/navigation.js";
+import Icone from "../../components/ui/Icons.jsx";
+import { Modale } from "../../components/ui/Feedback.jsx";
+import { Badge, Carte, EtatVide, Selecteur, Squelette } from "../../components/ui/Primitives.jsx";
 import Pagination from "../../components/Pagination.jsx";
 import client from "../../api/client.js";
-import { ADMIN_NAV_ITEMS } from "./adminNav.jsx";
 
-const STATUT_LABELS = { nouvelle: "Nouvelle", en_cours: "En cours", resolue: "Resolue" };
-const STATUT_STYLES = {
-  nouvelle: "bg-ambre-vigilance/10 text-ambre-vigilance",
-  en_cours: "bg-indigo-trajectoire/10 text-indigo-trajectoire",
-  resolue: "bg-sauge-reussite/10 text-sauge-reussite",
-};
+const STATUT_LABELS = { nouvelle: "En attente", en_cours: "En cours de traitement", resolue: "Traitee" };
+const STATUT_TONS = { nouvelle: "vigilance", en_cours: "info", resolue: "succes" };
 
 export default function AdminReclamations() {
   const [result, setResult] = useState({ items: [], page: 1, pages: 1, total: 0 });
+  const [chargement, setChargement] = useState(true);
   const [statutFilter, setStatutFilter] = useState("");
   const [page, setPage] = useState(1);
-  const [selected, setSelected] = useState(null);
-  const [reply, setReply] = useState("");
+
+  const [reclamationOuverte, setReclamationOuverte] = useState(null);
+  const [chargementDetail, setChargementDetail] = useState(false);
 
   const load = (targetPage = page) => {
+    setChargement(true);
     client
       .get("/admin/reclamations", { params: { page: targetPage, statut: statutFilter || undefined } })
-      .then(({ data }) => setResult(data));
+      .then(({ data }) => setResult(data))
+      .finally(() => setChargement(false));
   };
 
   useEffect(() => {
@@ -37,112 +50,132 @@ export default function AdminReclamations() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page]);
 
-  const openDetail = async (id) => {
-    const { data } = await client.get(`/admin/reclamations/${id}`);
-    setSelected(data);
-  };
-
-  const submitReply = async (e) => {
-    e.preventDefault();
-    if (!reply.trim()) return;
-    const { data } = await client.post(`/admin/reclamations/${selected.id}/messages`, { message: reply });
-    setSelected(data);
-    setReply("");
-    load();
-  };
-
-  const updateStatut = async (statut) => {
-    await client.put(`/admin/reclamations/${selected.id}`, { statut });
-    const { data } = await client.get(`/admin/reclamations/${selected.id}`);
-    setSelected(data);
-    load();
-  };
+  async function ouvrirDetail(id) {
+    setReclamationOuverte({ id, messages: [] });
+    setChargementDetail(true);
+    try {
+      const { data } = await client.get(`/admin/reclamations/${id}`);
+      setReclamationOuverte(data);
+    } finally {
+      setChargementDetail(false);
+    }
+  }
 
   return (
-    <DashboardLayout title="Espace Administration" navItems={ADMIN_NAV_ITEMS}>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="font-display text-xl font-semibold text-encre-nocturne">Reclamations</h1>
-        <select
-          value={statutFilter}
-          onChange={(e) => setStatutFilter(e.target.value)}
-          className="focus-ring rounded-md border border-encre-nocturne/20 px-3 py-1.5 text-sm"
-        >
-          <option value="">Tous les statuts</option>
-          {Object.entries(STATUT_LABELS).map(([k, label]) => (
-            <option key={k} value={k}>{label}</option>
-          ))}
-        </select>
-      </div>
-
-      <div className="mt-6 grid gap-4 lg:grid-cols-2">
-        <Card title="Liste des reclamations">
-          <ul className="divide-y divide-encre-nocturne/10 text-sm">
+    <CoqueApplication
+      titre="Reclamations"
+      sousTitre="Supervision des echanges entre etudiants et enseignants"
+      sectionsNavigation={navigationAdmin()}
+      actions={
+        <Selecteur
+          valeur={statutFilter}
+          onChange={setStatutFilter}
+          options={[
+            { valeur: "", libelle: "Tous les statuts" },
+            { valeur: "nouvelle", libelle: STATUT_LABELS.nouvelle },
+            { valeur: "en_cours", libelle: STATUT_LABELS.en_cours },
+            { valeur: "resolue", libelle: STATUT_LABELS.resolue },
+          ]}
+        />
+      }
+    >
+      <Carte>
+        {chargement ? (
+          <div className="space-y-3">
+            {Array.from({ length: 4 }).map((_, index) => (
+              <Squelette key={index} className="h-16 rounded-lg" />
+            ))}
+          </div>
+        ) : result.items.length === 0 ? (
+          <EtatVide
+            icone={Icone.Reclamations}
+            titre="Aucune reclamation"
+            message="Les demandes soumises par les etudiants a leurs enseignants apparaitront ici."
+          />
+        ) : (
+          <ul className="divide-y divide-ardoise-100 text-sm">
             {result.items.map((r) => (
-              <li key={r.id} className="py-2">
-                <button onClick={() => openDetail(r.id)} className="w-full text-left hover:text-indigo-trajectoire">
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium">{r.sujet}</span>
-                    <span className={`rounded-full px-2 py-0.5 text-xs ${STATUT_STYLES[r.statut]}`}>
-                      {STATUT_LABELS[r.statut]}
-                    </span>
+              <li key={r.id}>
+                <button
+                  onClick={() => ouvrirDetail(r.id)}
+                  className="anneau-focus flex w-full items-center justify-between gap-3 py-3 text-left transition-colors hover:text-indigo-trajectoire"
+                >
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="truncate font-medium text-encre-900">{r.sujet}</span>
+                      <Badge ton={STATUT_TONS[r.statut]}>{STATUT_LABELS[r.statut]}</Badge>
+                    </div>
+                    <p className="mt-0.5 truncate text-xs text-ardoise-500">
+                      {r.etudiant} · {r.classe ?? "Classe inconnue"} ·{" "}
+                      {r.matiere ? `${r.matiere} · ` : ""}
+                      {r.enseignant ?? "Enseignant non assigne"} ·{" "}
+                      {new Date(r.date_creation).toLocaleDateString("fr-FR")}
+                    </p>
                   </div>
-                  <span className="text-xs text-encre-nocturne/50">
-                    {r.etudiant} · {new Date(r.date_creation).toLocaleDateString("fr-FR")}
-                  </span>
+                  <Icone.ChevronDroite className="h-4 w-4 shrink-0 text-ardoise-400" />
                 </button>
               </li>
             ))}
-            {result.items.length === 0 && (
-              <li className="py-6 text-center text-encre-nocturne/50">Aucune reclamation.</li>
-            )}
           </ul>
-          <Pagination page={result.page} pages={result.pages} total={result.total} onPageChange={setPage} />
-        </Card>
+        )}
+        <Pagination page={result.page} pages={result.pages} total={result.total} onPageChange={setPage} />
+      </Carte>
 
-        <Card title={selected ? selected.sujet : "Detail"}>
-          {!selected ? (
-            <p className="text-sm text-encre-nocturne/50">Selectionnez une reclamation pour repondre.</p>
-          ) : (
-            <div>
-              <div className="mb-3 flex items-center justify-between">
-                <span className="text-xs text-encre-nocturne/60">{selected.etudiant}</span>
-                <select
-                  value={selected.statut}
-                  onChange={(e) => updateStatut(e.target.value)}
-                  className="focus-ring rounded-md border border-encre-nocturne/20 px-2 py-1 text-xs"
-                >
-                  {Object.entries(STATUT_LABELS).map(([k, label]) => (
-                    <option key={k} value={k}>{label}</option>
-                  ))}
-                </select>
+      <Modale
+        ouverte={reclamationOuverte != null}
+        onFermer={() => setReclamationOuverte(null)}
+        titre={reclamationOuverte?.sujet}
+        sousTitre={
+          reclamationOuverte
+            ? `${reclamationOuverte.etudiant ?? ""} · ${reclamationOuverte.classe ?? ""} · ${
+                reclamationOuverte.matiere ? `${reclamationOuverte.matiere} · ` : ""
+              }${reclamationOuverte.enseignant ?? "Enseignant non assigne"}`
+            : undefined
+        }
+        taille="lg"
+      >
+        {reclamationOuverte && (
+          <div>
+            <div className="mb-3">
+              <Badge ton={STATUT_TONS[reclamationOuverte.statut]}>
+                {STATUT_LABELS[reclamationOuverte.statut]}
+              </Badge>
+            </div>
+
+            {chargementDetail ? (
+              <div className="space-y-2">
+                {Array.from({ length: 3 }).map((_, index) => (
+                  <Squelette key={index} className="h-14 rounded-lg" />
+                ))}
               </div>
-              <div className="max-h-64 space-y-3 overflow-y-auto">
-                {selected.messages.map((m) => (
+            ) : (
+              <div className="max-h-96 space-y-3 overflow-y-auto">
+                {reclamationOuverte.messages.map((m) => (
                   <div
                     key={m.id}
-                    className={`rounded-md p-2 text-sm ${m.auteur_role === "admin" ? "bg-brume-academique" : "bg-indigo-trajectoire/10"}`}
+                    className={`rounded-lg p-3 text-sm ${
+                      m.auteur_role === "etudiant" ? "bg-ardoise-50" : "bg-indigo-50"
+                    }`}
                   >
-                    <p className="text-xs font-medium text-encre-nocturne/60">
-                      {m.auteur_role === "admin" ? "Administration" : selected.etudiant} ·{" "}
-                      {new Date(m.date_envoi).toLocaleString("fr-FR")}
+                    <p className="text-xs font-medium text-ardoise-500">
+                      {m.auteur_role === "etudiant"
+                        ? reclamationOuverte.etudiant
+                        : reclamationOuverte.enseignant ?? "Enseignant"}{" "}
+                      · {new Date(m.date_envoi).toLocaleString("fr-FR")}
                     </p>
-                    <p className="mt-1">{m.message}</p>
+                    <p className="mt-1 text-encre-900">{m.message}</p>
                   </div>
                 ))}
               </div>
-              <form onSubmit={submitReply} className="mt-3 flex gap-2">
-                <input
-                  value={reply}
-                  onChange={(e) => setReply(e.target.value)}
-                  placeholder="Repondre a l'etudiant..."
-                  className="focus-ring flex-1 rounded-md border border-encre-nocturne/20 px-3 py-2 text-sm"
-                />
-                <Button type="submit">Envoyer</Button>
-              </form>
-            </div>
-          )}
-        </Card>
-      </div>
-    </DashboardLayout>
+            )}
+
+            <p className="mt-4 border-t border-ardoise-200 pt-3 text-xs text-ardoise-500">
+              Echange gere directement entre l'etudiant et l'enseignant concerne — l'administration
+              n'y intervient pas.
+            </p>
+          </div>
+        )}
+      </Modale>
+    </CoqueApplication>
   );
 }

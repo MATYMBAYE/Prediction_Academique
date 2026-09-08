@@ -18,10 +18,11 @@ export function AuthProvider({ children }) {
     localStorage.removeItem("access_token");
     localStorage.removeItem("auth_user");
     setUser(null);
+    window.location.href = "/connexion";
   }, []);
 
-  const login = useCallback(async (identifiant, mot_de_passe) => {
-    const { data } = await client.post("/auth/login", { identifiant, mot_de_passe });
+  const login = useCallback(async (email, mot_de_passe) => {
+    const { data } = await client.post("/auth/login", { email, mot_de_passe });
 
     if (data.compte_desactive) {
       // Compte reconnu mais desactive : pas de session ouverte, on redirige

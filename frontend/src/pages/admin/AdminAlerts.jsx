@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import DashboardLayout from "../../components/DashboardLayout.jsx";
+import CoqueApplication from "../../components/AppShell.jsx";
+import { navigationAdmin } from "../../components/navigation.js";
 import Card from "../../components/Card.jsx";
 import { RiskBadge } from "../../components/StatusBadge.jsx";
 import client from "../../api/client.js";
-import { ADMIN_NAV_ITEMS } from "./adminNav.jsx";
 
 const STATUTS = ["nouvelle", "en_cours", "traitee"];
 const STATUT_LABELS = { nouvelle: "Nouvelle", en_cours: "En cours", traitee: "Traitee" };
@@ -30,19 +30,19 @@ export default function AdminAlerts() {
   };
 
   return (
-    <DashboardLayout title="Espace Administration" navItems={ADMIN_NAV_ITEMS}>
-      <h1 className="font-display text-xl font-semibold text-encre-nocturne">Alertes de risque eleve</h1>
-      <p className="mt-1 text-sm text-encre-nocturne/60">
-        Etudiants ayant declenche une alerte automatique suite a une prediction a risque eleve.
-      </p>
-
-      <div className="mt-6">
+    <CoqueApplication
+      titre="Alertes de risque academique"
+      sousTitre="Alertes precoces declenchees automatiquement par le systeme de prediction (risque d'echec, notes faibles, absences repetees)"
+      sectionsNavigation={navigationAdmin()}
+    >
+      <div className="mt-1">
         <Card>
           <div className="overflow-x-auto">
             <table className="w-full min-w-[600px] text-left text-sm">
               <thead>
                 <tr className="border-b border-encre-nocturne/10 text-encre-nocturne/60">
                   <th className="py-2 font-medium">Etudiant</th>
+                  <th className="py-2 font-medium">Type</th>
                   <th className="py-2 font-medium">Classe</th>
                   <th className="py-2 font-medium">Niveau</th>
                   <th className="py-2 font-medium">Date</th>
@@ -57,6 +57,7 @@ export default function AdminAlerts() {
                         {a.etudiant}
                       </Link>
                     </td>
+                    <td className="py-2 text-encre-nocturne/70">{a.libelle_type}</td>
                     <td className="py-2 text-encre-nocturne/70">{a.classe ?? "-"}</td>
                     <td className="py-2"><RiskBadge level={a.niveau_risque} /></td>
                     <td className="py-2 text-encre-nocturne/60">
@@ -77,7 +78,7 @@ export default function AdminAlerts() {
                 ))}
                 {!loading && alerts.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="py-6 text-center text-encre-nocturne/50">
+                    <td colSpan={6} className="py-6 text-center text-encre-nocturne/50">
                       Aucune alerte pour le moment.
                     </td>
                   </tr>
@@ -87,6 +88,6 @@ export default function AdminAlerts() {
           </div>
         </Card>
       </div>
-    </DashboardLayout>
+    </CoqueApplication>
   );
 }

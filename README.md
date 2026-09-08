@@ -105,14 +105,64 @@ L'API est disponible sur `http://localhost:5000/api` (voir `/api/health`).
 Cette URL ne sert que l'API — l'application s'utilise via le frontend
 (`http://localhost:5173`), jamais directement sur le port 5000.
 
-### Comptes de demonstration (crees par `seed_data.py`)
+### Comptes de demonstration (crees par `seed_data.py` et `migrate_roles_and_tables.py`)
 
-| Role | Identifiant | Mot de passe | Statut |
+| Role | Identifiant / Email | Mot de passe | Statut |
 |---|---|---|---|
 | Administrateur | `admin` | `Admin@1234` | Actif |
+| Assistante pédagogique | `assistante@groupeisi.com` | `Assistante@1234` | Actif |
+| Technicien | `technicien@groupeisi.com` | `Technicien@1234` | Actif |
 | Enseignant (exemple) | `fatou.diagne1` | `Enseignant@1234` | Actif |
 | Etudiant (exemple actif) | voir la sortie du script | `Etudiant@1234` | Actif |
 | Etudiant (exemple desactive) | `aminata.fall1` | `Etudiant@1234` | Inactif (demo FR-16) |
+
+### Modélisation UML : Généralisation des rôles administratifs
+
+Dans la modélisation UML du système (diagramme de cas d'utilisation), **l'Administrateur possède une vue globale** et hérite des fonctionnalités de **l'Assistante pédagogique** et du **Technicien** par **généralisation / héritage d'acteur** (`Administrateur --|> Assistante pédagogique` et `Administrateur --|> Technicien`).
+
+```mermaid
+classDiagram
+    direction BT
+    class Utilisateur {
+        <<Acteur>>
+        +S'authentifier()
+        +Changer mot de passe()
+    }
+    class AssistantePedagogique {
+        <<Acteur>>
+        +Consulter etudiants a risque()
+        +Traiter alertes pedagogiques()
+        +Saisir notes et evaluations()
+        +Consulter classes et effectifs()
+    }
+    class Technicien {
+        <<Acteur>>
+        +Affecter enseignants / matieres / classes()
+        +Auditer coherence et doublons()
+        +Gerer catalogue des matieres()
+        +Gerer annees academiques()
+    }
+    class Administrateur {
+        <<Acteur>>
+        +Gerer utilisateurs et securite()
+        +Gerer comptes et activations()
+        +Recalculer predictions globales()
+        +Consulter statistiques et rapports()
+        +Vue globale systeme()
+    }
+
+    AssistantePedagogique --|> Utilisateur
+    Technicien --|> Utilisateur
+    Administrateur --|> AssistantePedagogique : Hérite (Généralisation)
+    Administrateur --|> Technicien : Hérite (Généralisation)
+```
+
+Cette généralisation se traduit concrètement dans l'application par :
+- **Backend & Autorisations :** Décorateurs `@role_required` autorisant systématiquement `"admin"` sur toutes les routes des blueprints `/api/technicien/*`, `/api/assistant/*` et `/api/grades/*`.
+- **Frontend & Navigation :** Une sidebar Administrateur organisée regroupant l'ensemble des modules (Vie scolaire & Pédagogie, Structure & Gestion technique, Administration système) avec un bouton de retour rapide vers le « Pilotage principal » dans toutes les sous-rubriques.
+- **Importation des notes Excel / CSV :** Module unifié d'importation de fichiers Excel (`.xlsx`, `.csv`) accessible aux Enseignants (sur leurs matières/classes affectées), à l'Assistante pédagogique et à l'Administrateur, avec modèle téléchargeable et recalcul automatique des prédictions ML.
+- **Dashboard Administrateur :** Préservation intégrale des KPIs, métriques et graphiques d'origine, complétée par un panneau de vue globale permettant l'accès rapide aux opérations de structure et de pédagogie.
+
 
 ## 4. Frontend (React)
 

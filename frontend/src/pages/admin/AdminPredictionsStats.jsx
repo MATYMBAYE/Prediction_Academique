@@ -14,10 +14,10 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import DashboardLayout from "../../components/DashboardLayout.jsx";
+import CoqueApplication from "../../components/AppShell.jsx";
+import { navigationAdmin } from "../../components/navigation.js";
 import Card from "../../components/Card.jsx";
 import client from "../../api/client.js";
-import { ADMIN_NAV_ITEMS } from "./adminNav.jsx";
 
 // Couleurs de statut du cahier des charges §2.2 - reservees exclusivement
 // a la signalétique de risque (jamais decoratives ailleurs).
@@ -64,9 +64,9 @@ export default function AdminPredictionsStats() {
 
   if (!stats) {
     return (
-      <DashboardLayout title="Espace Administration" navItems={ADMIN_NAV_ITEMS}>
+      <CoqueApplication titre="Gestion des predictions" sectionsNavigation={navigationAdmin()}>
         <p className="text-encre-nocturne/60">Chargement des statistiques...</p>
-      </DashboardLayout>
+      </CoqueApplication>
     );
   }
 
@@ -78,13 +78,12 @@ export default function AdminPredictionsStats() {
   const totalEtudiants = pieData.reduce((sum, d) => sum + d.value, 0);
 
   return (
-    <DashboardLayout title="Espace Administration" navItems={ADMIN_NAV_ITEMS}>
-      <h1 className="font-display text-xl font-semibold text-encre-nocturne">Gestion des predictions</h1>
-      <p className="mt-1 text-sm text-encre-nocturne/60">
-        Vue analytique du risque academique sur l'ensemble de l'etablissement.
-      </p>
-
-      <div className="mt-6 grid gap-4 lg:grid-cols-2">
+    <CoqueApplication
+      titre="Gestion des predictions"
+      sousTitre="Vue analytique du risque academique sur l'ensemble de l'etablissement"
+      sectionsNavigation={navigationAdmin()}
+    >
+      <div className="grid gap-4 lg:grid-cols-2">
         <Card title="Repartition des risques">
           <div style={{ width: "100%", height: 240 }}>
             <ResponsiveContainer>
@@ -245,6 +244,6 @@ export default function AdminPredictionsStats() {
           </div>
         </Card>
       </div>
-    </DashboardLayout>
+    </CoqueApplication>
   );
 }

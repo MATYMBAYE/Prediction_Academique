@@ -99,7 +99,7 @@ def seed():
         # --- Compte administrateur ---------------------------------
         if User.query.filter_by(role="admin").first() is None:
             print("Creation du compte administrateur de demonstration...")
-            admin = User(identifiant="admin", email="admin@isi-supetch.sn", role="admin", statut="actif")
+            admin = User(identifiant="admin", email="matymbayeisidp@groupeisi.com", role="admin", statut="actif", email_verifie=True)
             admin.set_password("Admin@1234")
             db.session.add(admin)
         db.session.commit()
@@ -123,7 +123,7 @@ def seed():
         teachers = []
         for i, (prenom, nom) in enumerate(TEACHERS):
             identifiant = make_login(prenom, nom, i + 1)
-            user = User(identifiant=identifiant, email=f"{identifiant}@isi-supetch.sn", role="enseignant", statut="actif")
+            user = User(identifiant=identifiant, email=f"{identifiant}@groupeisi.com", role="enseignant", statut="actif", email_verifie=True)
             user.set_password("Enseignant@1234")
             db.session.add(user)
             db.session.flush()
@@ -152,8 +152,9 @@ def seed():
                 matricule = f"ISI2026-{student_index:04d}"
                 identifiant = make_login(prenom, nom, student_index)
 
-                user = User(identifiant=identifiant, email=f"{identifiant}@etu.isi-supetch.sn", role="etudiant", statut="actif")
+                user = User(identifiant=identifiant, email=f"{identifiant}@groupeisi.com", role="etudiant", statut="actif", email_verifie=True)
                 user.set_password("Etudiant@1234")
+
                 db.session.add(user)
                 db.session.flush()
 

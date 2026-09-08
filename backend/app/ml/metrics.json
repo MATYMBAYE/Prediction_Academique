@@ -1,14 +1,107 @@
 {
-  "accuracy": 0.7,
-  "precision": 0.6901,
-  "recall": 0.6806,
-  "f1_score": 0.6853,
-  "n_train": 1200,
-  "n_test": 300,
-  "features": [
+  "accuracy": 0.823,
+  "precision": 0.828,
+  "recall": 0.839,
+  "f1_score": 0.8335,
+  "roc_auc": 0.8926,
+  "rappel_echec": 0.8051,
+  "precision_echec": 0.8172,
+  "brier_score": 0.1272,
+  "matrice_confusion": {
+    "vrais_negatifs": 380,
+    "faux_positifs": 92,
+    "faux_negatifs": 85,
+    "vrais_positifs": 443
+  },
+  "algorithme_retenu": "Foret aleatoire",
+  "calibration": "isotonique (validation croisee 5 plis)",
+  "source_donnees": "simulation (4000 etudiants)",
+  "date_entrainement": "2026-07-22T16:27:19",
+  "variables": [
     "moyenne_generale",
+    "moyenne_recente",
     "taux_assiduite",
-    "nb_absences_non_justifiees",
-    "ecart_type_notes"
-  ]
+    "ecart_type_notes",
+    "taux_notes_faibles",
+    "tendance",
+    "nb_absences"
+  ],
+  "n_train": 3000,
+  "n_test": 1000,
+  "comparatif_modeles": [
+    {
+      "modele": "Regression logistique",
+      "roc_auc_cv": 0.8774,
+      "ecart_type_cv": 0.0166
+    },
+    {
+      "modele": "Foret aleatoire",
+      "roc_auc_cv": 0.8818,
+      "ecart_type_cv": 0.0157
+    },
+    {
+      "modele": "Gradient boosting",
+      "roc_auc_cv": 0.8799,
+      "ecart_type_cv": 0.016
+    }
+  ],
+  "importances": [
+    {
+      "variable": "moyenne_generale",
+      "libelle": "Moyenne generale",
+      "importance": 0.08054,
+      "poids_relatif": 0.5983
+    },
+    {
+      "variable": "taux_assiduite",
+      "libelle": "Taux d'assiduite",
+      "importance": 0.03205,
+      "poids_relatif": 0.2381
+    },
+    {
+      "variable": "moyenne_recente",
+      "libelle": "Moyenne du dernier semestre",
+      "importance": 0.01215,
+      "poids_relatif": 0.0902
+    },
+    {
+      "variable": "taux_notes_faibles",
+      "libelle": "Part de notes sous la moyenne",
+      "importance": 0.00515,
+      "poids_relatif": 0.0383
+    },
+    {
+      "variable": "ecart_type_notes",
+      "libelle": "Regularite des notes",
+      "importance": 0.00262,
+      "poids_relatif": 0.0194
+    },
+    {
+      "variable": "nb_absences",
+      "libelle": "Nombre d'absences",
+      "importance": 0.00211,
+      "poids_relatif": 0.0157
+    },
+    {
+      "variable": "tendance",
+      "libelle": "Dynamique de progression",
+      "importance": 0.0,
+      "poids_relatif": 0.0
+    }
+  ],
+  "distribution_reference": {
+    "p10": 0.0885,
+    "p25": 0.1166,
+    "mediane": 0.6399,
+    "p75": 0.8841,
+    "p90": 0.9271
+  },
+  "profil_donnees": {
+    "n_echantillons": 4000,
+    "taux_reussite": 0.5285,
+    "taux_echec": 0.4715,
+    "moyenne_generale_moy": 10.94,
+    "taux_assiduite_moy": 65.97,
+    "nb_evaluations_moy": 5.53
+  }
 }

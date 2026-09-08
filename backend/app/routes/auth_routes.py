@@ -12,20 +12,23 @@ auth_bp = Blueprint("auth", __name__, url_prefix="/api/auth")
 
 @auth_bp.post("/login")
 def login():
-    """Connexion unique etudiant/admin (cahier des charges §3.1).
+    """Connexion par adresse e-mail + mot de passe (cahier des charges §3.1).
     Ne revele jamais si un compte existe ou non : message d'erreur generique.
     """
     data = request.get_json(silent=True) or {}
-    identifiant = (data.get("identifiant") or "").strip()
+    identifiant_ou_email = (data.get("email") or data.get("identifiant") or "").strip().lower()
     mot_de_passe = data.get("mot_de_passe") or ""
 
-    if not identifiant or not mot_de_passe:
-        return jsonify({"error": "Identifiant et mot de passe requis."}), 400
+    if not identifiant_ou_email or not mot_de_passe:
+        return jsonify({"error": "Adresse e-mail ou identifiant et mot de passe requis."}), 400
 
-    user = User.query.filter_by(identifiant=identifiant).first()
+    user = User.query.filter(
+        db.or_(User.email == identifiant_ou_email, User.identifiant == identifiant_ou_email)
+    ).first()
 
     if user is None or not user.check_password(mot_de_passe):
         return jsonify({"error": "Identifiant ou mot de passe incorrect."}), 401
+
 
     access_token = create_access_token(
         identity=str(user.id),
@@ -72,19 +75,19 @@ def me():
 
 @auth_bp.post("/mot-de-passe-oublie")
 def request_password_reset():
-    """Demande de reinitialisation (§3.1). Message identique que le compte
-    existe ou non, pour ne jamais reveler son existence.
+    """Demande de reinitialisation par e-mail (§3.1). Message identique que
+    le compte existe ou non, pour ne jamais reveler son existence.
     """
     data = request.get_json(silent=True) or {}
-    identifiant = (data.get("identifiant") or "").strip()
+    email = (data.get("email") or "").strip().lower()
     generic_response = {
         "message": (
-            "Si un compte correspond a cet identifiant, un lien de "
+            "Si un compte correspond a cette adresse e-mail, un lien de "
             "reinitialisation vient d'etre genere."
         )
     }
 
-    user = User.query.filter_by(identifiant=identifiant).first() if identifiant else None
+    user = User.query.filter_by(email=email).first() if email else None
     if user is None:
         return jsonify(generic_response), 200
 
@@ -126,3 +129,128 @@ def reset_password():
     db.session.commit()
 
     return jsonify({"message": "Mot de passe reinitialise avec succes."}), 200
+
+
+@auth_bp.post("/demander-verification-email")
+@jwt_required()
+def demander_verification_email():
+    """
+    Exige une adresse e-mail institutionnelle (@groupeisi.com)
+    et genere un code OTP expedie par e-mail.
+    """
+    import random
+    from datetime import timedelta
+    from app.utils.validators import validate_institutional_email
+    from app.utils.email import send_otp_email
+
+    user = User.query.get(get_jwt_identity())
+    if user is None:
+        return jsonify({"error": "Compte introuvable."}), 404
+
+    data = request.get_json(silent=True) or {}
+    nouvelle_email = (data.get("nouvelle_email") or "").strip()
+
+    if not nouvelle_email:
+        return jsonify({"error": "Adresse e-mail requise."}), 400
+
+    is_valid, err_msg = validate_institutional_email(nouvelle_email)
+    if not is_valid:
+        return jsonify({"error": err_msg}), 400
+
+    existing_user = User.query.filter(User.email == nouvelle_email.lower(), User.id != user.id).first()
+    if existing_user:
+        return jsonify({"error": "Cette adresse e-mail est deja utilisee par un autre compte."}), 400
+
+    otp_code = f"{random.randint(100000, 999999)}"
+    user.pending_email = nouvelle_email.lower()
+    user.otp_code = otp_code
+    user.otp_expires_at = datetime.utcnow() + timedelta(minutes=15)
+    db.session.commit()
+
+    nom_utilisateur = (
+        f"{user.student.prenom} {user.student.nom}"
+        if user.student
+        else (f"{user.teacher.prenom} {user.teacher.nom}" if user.teacher else user.identifiant)
+    )
+
+    send_otp_email(user.pending_email, otp_code, nom_utilisateur)
+
+    return jsonify({
+        "message": f"Un code de vérification à 6 chiffres a été envoyé à l'adresse {user.pending_email}.",
+        "pending_email": user.pending_email
+    }), 200
+
+
+@auth_bp.post("/verifier-otp-email")
+@jwt_required()
+def verifier_otp_email():
+    """
+    Valide le code OTP saisi par l'utilisateur pour confirmer son adresse e-mail @groupeisi.com.
+    """
+    user = User.query.get(get_jwt_identity())
+    if user is None:
+        return jsonify({"error": "Compte introuvable."}), 404
+
+    data = request.get_json(silent=True) or {}
+    otp_code_saisi = (data.get("otp") or "").strip()
+
+    if not otp_code_saisi:
+        return jsonify({"error": "Code de vérification requis."}), 400
+
+    if not user.otp_code or user.otp_code != otp_code_saisi:
+        return jsonify({"error": "Code de vérification invalide."}), 400
+
+    if not user.otp_expires_at or datetime.utcnow() > user.otp_expires_at:
+        return jsonify({"error": "Code de vérification expiré. Veuillez demander un nouveau code."}), 400
+
+    # Validation et mise a jour de l'adresse e-mail
+    adresse_finale = user.pending_email or user.email
+    user.email = adresse_finale
+    user.email_verifie = True
+    user.otp_code = None
+    user.otp_expires_at = None
+    user.pending_email = None
+
+    db.session.commit()
+
+    return jsonify({
+        "message": "Adresse e-mail vérifiée avec succès !",
+        "user": user.to_dict()
+    }), 200
+
+
+@auth_bp.post("/renvoyer-otp-email")
+@jwt_required()
+def renvoyer_otp_email():
+    """
+    Regenere et renvoie un code OTP pour l'adresse e-mail en attente de verification.
+    """
+    import random
+    from datetime import timedelta
+    from app.utils.email import send_otp_email
+
+    user = User.query.get(get_jwt_identity())
+    if user is None:
+        return jsonify({"error": "Compte introuvable."}), 404
+
+    cible_email = user.pending_email or user.email
+    if not cible_email:
+        return jsonify({"error": "Aucune adresse e-mail a verifier."}), 400
+
+    otp_code = f"{random.randint(100000, 999999)}"
+    user.otp_code = otp_code
+    user.otp_expires_at = datetime.utcnow() + timedelta(minutes=15)
+    db.session.commit()
+
+    nom_utilisateur = (
+        f"{user.student.prenom} {user.student.nom}"
+        if user.student
+        else (f"{user.teacher.prenom} {user.teacher.nom}" if user.teacher else user.identifiant)
+    )
+
+    send_otp_email(cible_email, otp_code, nom_utilisateur)
+
+    return jsonify({
+        "message": f"Un nouveau code de vérification a été envoyé à {cible_email}."
+    }), 200
+

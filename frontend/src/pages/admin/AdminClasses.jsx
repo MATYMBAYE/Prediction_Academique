@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import DashboardLayout from "../../components/DashboardLayout.jsx";
+import CoqueApplication from "../../components/AppShell.jsx";
+import { navigationAdmin } from "../../components/navigation.js";
 import Card from "../../components/Card.jsx";
 import Button from "../../components/Button.jsx";
 import client from "../../api/client.js";
-import { ADMIN_NAV_ITEMS } from "./adminNav.jsx";
 import { NIVEAUX } from "../../academic.js";
 
 export default function AdminClasses() {
@@ -72,9 +72,8 @@ export default function AdminClasses() {
   };
 
   return (
-    <DashboardLayout title="Espace Administration" navItems={ADMIN_NAV_ITEMS}>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="font-display text-xl font-semibold text-encre-nocturne">Gestion des classes</h1>
+    <CoqueApplication titre="Gestion des classes" sectionsNavigation={navigationAdmin()}>
+      <div className="flex flex-wrap items-center justify-end gap-3">
         <div className="flex gap-2">
           <Button variant="secondary" onClick={() => setShowFiliereForm((v) => !v)}>
             {showFiliereForm ? "Annuler" : "Nouvelle filiere"}
@@ -188,6 +187,6 @@ export default function AdminClasses() {
           </Card>
         ))}
       </div>
-    </DashboardLayout>
+    </CoqueApplication>
   );
 }

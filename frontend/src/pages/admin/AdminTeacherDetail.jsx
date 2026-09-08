@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import DashboardLayout from "../../components/DashboardLayout.jsx";
+import CoqueApplication from "../../components/AppShell.jsx";
+import { navigationAdmin } from "../../components/navigation.js";
 import Card from "../../components/Card.jsx";
 import Button from "../../components/Button.jsx";
 import ConfirmModal from "../../components/ConfirmModal.jsx";
 import { AccountStatusBadge } from "../../components/StatusBadge.jsx";
 import client from "../../api/client.js";
-import { ADMIN_NAV_ITEMS } from "./adminNav.jsx";
 
 export default function AdminTeacherDetail() {
   const { id } = useParams();
@@ -32,27 +32,23 @@ export default function AdminTeacherDetail() {
 
   if (!teacher) {
     return (
-      <DashboardLayout title="Espace Administration" navItems={ADMIN_NAV_ITEMS}>
+      <CoqueApplication titre="Enseignant" sectionsNavigation={navigationAdmin()}>
         <p className="text-encre-nocturne/60">Chargement...</p>
-      </DashboardLayout>
+      </CoqueApplication>
     );
   }
 
   return (
-    <DashboardLayout title="Espace Administration" navItems={ADMIN_NAV_ITEMS}>
+    <CoqueApplication
+      titre={`${teacher.prenom} ${teacher.nom}`}
+      sousTitre={`Identifiant : ${teacher.identifiant}${teacher.email ? ` · Email : ${teacher.email}` : ""}`}
+      sectionsNavigation={navigationAdmin()}
+    >
       <Link to="/admin/enseignants" className="text-sm text-indigo-trajectoire hover:underline">
         &larr; Retour a la liste
       </Link>
 
-      <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="font-display text-xl font-semibold text-encre-nocturne">
-            {teacher.prenom} {teacher.nom}
-          </h1>
-          <p className="text-sm text-encre-nocturne/60">
-            Identifiant : {teacher.identifiant} {teacher.email && `· Email : ${teacher.email}`}
-          </p>
-        </div>
+      <div className="mt-4 flex flex-wrap items-center justify-end gap-3">
         <div className="flex items-center gap-3">
           <AccountStatusBadge status={teacher.statut_compte} />
           <Button
@@ -106,6 +102,6 @@ export default function AdminTeacherDetail() {
         onConfirm={toggleStatus}
         onCancel={() => setModalOpen(false)}
       />
-    </DashboardLayout>
+    </CoqueApplication>
   );
 }

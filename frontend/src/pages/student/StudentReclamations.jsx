@@ -1,151 +1,308 @@
+/**
+ * Reclamations de l'etudiant.
+ *
+ * Depuis la refonte du module, une reclamation est adressee directement a
+ * l'enseignant de la matiere concernee (plutot qu'a l'administration) : le
+ * formulaire de creation demande donc la matiere en premier, ce qui
+ * determine automatiquement le destinataire.
+ *
+ * Consomme GET/POST /api/student/reclamations, GET /api/student/matieres.
+ */
 import { useEffect, useState } from "react";
-import DashboardLayout from "../../components/DashboardLayout.jsx";
-import Card from "../../components/Card.jsx";
-import Button from "../../components/Button.jsx";
+import CoqueApplication from "../../components/AppShell.jsx";
+import { navigationEtudiant } from "../../components/navigation.js";
+import Icone from "../../components/ui/Icons.jsx";
+import { Modale, useNotifications } from "../../components/ui/Feedback.jsx";
+import { Badge, Bouton, Carte, EtatVide, Squelette } from "../../components/ui/Primitives.jsx";
 import client from "../../api/client.js";
-import { STUDENT_NAV_ITEMS } from "./studentNav.js";
 
-const STATUT_LABELS = { nouvelle: "Nouvelle", en_cours: "En cours", resolue: "Resolue" };
-const STATUT_STYLES = {
-  nouvelle: "bg-ambre-vigilance/10 text-ambre-vigilance",
-  en_cours: "bg-indigo-trajectoire/10 text-indigo-trajectoire",
-  resolue: "bg-sauge-reussite/10 text-sauge-reussite",
-};
+const STATUT_LABELS = { nouvelle: "En attente", en_cours: "En cours de traitement", resolue: "Traitee" };
+const STATUT_TONS = { nouvelle: "vigilance", en_cours: "info", resolue: "succes" };
 
 export default function StudentReclamations() {
   const [reclamations, setReclamations] = useState([]);
-  const [selected, setSelected] = useState(null);
-  const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ sujet: "", message: "" });
-  const [reply, setReply] = useState("");
-  const [error, setError] = useState("");
+  const [matieres, setMatieres] = useState([]);
+  const [chargement, setChargement] = useState(true);
 
-  const load = () => client.get("/student/reclamations").then(({ data }) => setReclamations(data));
+  const [modaleCreationOuverte, setModaleCreationOuverte] = useState(false);
+  const [form, setForm] = useState({ matiere: "", sujet: "", message: "" });
+  const [erreurForm, setErreurForm] = useState("");
+  const [envoiEnCours, setEnvoiEnCours] = useState(false);
+
+  const [reclamationOuverte, setReclamationOuverte] = useState(null);
+  const [chargementDetail, setChargementDetail] = useState(false);
+  const [reponse, setReponse] = useState("");
+  const [envoiReponseEnCours, setEnvoiReponseEnCours] = useState(false);
+
+  const notifications = useNotifications();
+
+  const charger = () =>
+    client.get("/student/reclamations").then(({ data }) => {
+      setReclamations(data);
+      setChargement(false);
+    });
 
   useEffect(() => {
-    load();
+    charger();
+    client.get("/student/matieres").then(({ data }) => setMatieres(data));
   }, []);
 
-  const openDetail = async (id) => {
-    const { data } = await client.get(`/student/reclamations/${id}`);
-    setSelected(data);
-  };
+  async function ouvrirCreation() {
+    setForm({ matiere: matieres[0]?.matiere ?? "", sujet: "", message: "" });
+    setErreurForm("");
+    setModaleCreationOuverte(true);
+  }
 
-  const submitNew = async (e) => {
+  async function soumettreCreation(e) {
     e.preventDefault();
-    setError("");
+    setErreurForm("");
+    setEnvoiEnCours(true);
     try {
       await client.post("/student/reclamations", form);
-      setForm({ sujet: "", message: "" });
-      setShowForm(false);
-      load();
-    } catch (err) {
-      setError(err.response?.data?.error || "Impossible d'envoyer la reclamation.");
+      setModaleCreationOuverte(false);
+      notifications.succes("Reclamation envoyee a l'enseignant concerne.");
+      charger();
+    } catch (exception) {
+      setErreurForm(exception.response?.data?.error || "Impossible d'envoyer la reclamation.");
+    } finally {
+      setEnvoiEnCours(false);
     }
-  };
+  }
 
-  const submitReply = async (e) => {
+  async function ouvrirDetail(reclamation) {
+    setReclamationOuverte({ ...reclamation, messages: [] });
+    setChargementDetail(true);
+    setReponse("");
+    try {
+      const { data } = await client.get(`/student/reclamations/${reclamation.id}`);
+      setReclamationOuverte(data);
+      // La lecture marque la reponse comme vue cote serveur ; on reflete
+      // immediatement l'etat dans la liste sans recharger tout le monde.
+      setReclamations((precedent) =>
+        precedent.map((r) => (r.id === reclamation.id ? { ...r, a_nouvelle_reponse: false } : r))
+      );
+    } finally {
+      setChargementDetail(false);
+    }
+  }
+
+  async function envoyerReponse(e) {
     e.preventDefault();
-    if (!reply.trim()) return;
-    await client.post(`/student/reclamations/${selected.id}/messages`, { message: reply });
-    setReply("");
-    const { data } = await client.get(`/student/reclamations/${selected.id}`);
-    setSelected(data);
-    load();
-  };
+    if (!reponse.trim()) return;
+    setEnvoiReponseEnCours(true);
+    try {
+      await client.post(`/student/reclamations/${reclamationOuverte.id}/messages`, { message: reponse });
+      const { data } = await client.get(`/student/reclamations/${reclamationOuverte.id}`);
+      setReclamationOuverte(data);
+      setReponse("");
+      charger();
+    } finally {
+      setEnvoiReponseEnCours(false);
+    }
+  }
+
+  const nombreNonLues = reclamations.filter((r) => r.a_nouvelle_reponse).length;
 
   return (
-    <DashboardLayout title="Tableau de bord" navItems={STUDENT_NAV_ITEMS}>
-      <div className="flex items-center justify-between">
-        <h1 className="font-display text-xl font-semibold text-encre-nocturne">Mes reclamations</h1>
-        <Button onClick={() => setShowForm((v) => !v)}>{showForm ? "Annuler" : "Nouvelle reclamation"}</Button>
-      </div>
+    <CoqueApplication
+      titre="Mes reclamations"
+      sousTitre="Echangez directement avec l'enseignant de la matiere concernee"
+      sectionsNavigation={navigationEtudiant()}
+      actions={
+        <Bouton variante="primaire" taille="sm" icone={Icone.Ajouter} onClick={ouvrirCreation}>
+          Nouvelle reclamation
+        </Bouton>
+      }
+    >
+      {chargement ? (
+        <div className="space-y-3">
+          {Array.from({ length: 3 }).map((_, index) => (
+            <Squelette key={index} className="h-24 rounded-card" />
+          ))}
+        </div>
+      ) : reclamations.length === 0 ? (
+        <Carte>
+          <EtatVide
+            icone={Icone.Reclamations}
+            titre="Aucune reclamation"
+            message="En cas de probleme sur une note, une absence ou tout autre sujet lie a un cours, adressez-vous directement a l'enseignant concerne."
+            action={
+              <Bouton variante="secondaire" onClick={ouvrirCreation}>
+                Soumettre une reclamation
+              </Bouton>
+            }
+          />
+        </Carte>
+      ) : (
+        <div className="space-y-3">
+          {nombreNonLues > 0 && (
+            <p className="text-sm text-ardoise-500">
+              {nombreNonLues} reclamation(s) avec une nouvelle reponse de l'enseignant.
+            </p>
+          )}
+          {reclamations.map((r) => (
+            <button
+              key={r.id}
+              onClick={() => ouvrirDetail(r)}
+              className="anneau-focus flex w-full items-start gap-4 rounded-2xl border border-ardoise-200
+                bg-white p-5 text-left shadow-subtile transition-all duration-200 ease-douce
+                hover:-translate-y-0.5 hover:shadow-card"
+            >
+              <span className="relative grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-indigo-50 text-indigo-trajectoire">
+                <Icone.Reclamations className="h-5 w-5" />
+                {r.a_nouvelle_reponse && (
+                  <span className="absolute -right-1 -top-1 h-3 w-3 rounded-full bg-brique-500 ring-2 ring-white" />
+                )}
+              </span>
 
-      {showForm && (
-        <Card className="mt-4" title="Soumettre une reclamation">
-          <form onSubmit={submitNew} className="space-y-3">
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="truncate text-sm font-semibold text-encre-900">{r.sujet}</p>
+                  <Badge ton={STATUT_TONS[r.statut]}>{STATUT_LABELS[r.statut]}</Badge>
+                  {r.a_nouvelle_reponse && (
+                    <Badge ton="alerte" pastille>
+                      Nouvelle reponse
+                    </Badge>
+                  )}
+                </div>
+                <p className="mt-1 truncate text-xs text-ardoise-500">
+                  {r.matiere ? `${r.matiere} · ` : ""}
+                  {r.enseignant ?? "Enseignant non assigne"} ·{" "}
+                  {new Date(r.date_creation).toLocaleDateString("fr-FR", { day: "2-digit", month: "long" })}
+                </p>
+              </div>
+
+              <Icone.ChevronDroite className="mt-3 h-4 w-4 shrink-0 text-ardoise-400" />
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* ================================================== Nouvelle reclamation */}
+      <Modale
+        ouverte={modaleCreationOuverte}
+        onFermer={() => setModaleCreationOuverte(false)}
+        titre="Nouvelle reclamation"
+        sousTitre="Choisissez la matiere concernee : l'enseignant correspondant recevra votre demande"
+        taille="md"
+      >
+        {matieres.length === 0 ? (
+          <EtatVide
+            icone={Icone.Matieres}
+            titre="Aucune matiere disponible"
+            message="Aucun enseignant n'est encore affecte a votre classe. Rapprochez-vous de l'administration."
+          />
+        ) : (
+          <form onSubmit={soumettreCreation} className="space-y-4">
             <div>
-              <label className="mb-1 block text-sm font-medium text-encre-nocturne">Sujet</label>
+              <label className="mb-1 block text-sm font-medium text-encre-900">Matiere</label>
+              <select
+                required
+                value={form.matiere}
+                onChange={(e) => setForm((f) => ({ ...f, matiere: e.target.value }))}
+                className="anneau-focus w-full rounded-lg border border-ardoise-300 px-3 py-2 text-sm"
+              >
+                {matieres.map((m) => (
+                  <option key={m.matiere} value={m.matiere}>
+                    {m.matiere} — {m.enseignant ?? "enseignant non assigne"}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-encre-900">Sujet</label>
               <input
                 required
                 value={form.sujet}
                 onChange={(e) => setForm((f) => ({ ...f, sujet: e.target.value }))}
-                className="focus-ring w-full rounded-md border border-encre-nocturne/20 px-3 py-2 text-sm"
                 placeholder="ex. Erreur sur une note d'examen"
+                className="anneau-focus w-full rounded-lg border border-ardoise-300 px-3 py-2 text-sm"
               />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-encre-nocturne">Message</label>
+              <label className="mb-1 block text-sm font-medium text-encre-900">Message</label>
               <textarea
                 required
                 rows={4}
                 value={form.message}
                 onChange={(e) => setForm((f) => ({ ...f, message: e.target.value }))}
-                className="focus-ring w-full rounded-md border border-encre-nocturne/20 px-3 py-2 text-sm"
+                className="anneau-focus w-full rounded-lg border border-ardoise-300 px-3 py-2 text-sm"
               />
             </div>
-            {error && <p className="text-sm text-brique-alerte">{error}</p>}
-            <Button type="submit">Envoyer</Button>
+            {erreurForm && <p className="text-sm text-brique-600">{erreurForm}</p>}
+            <div className="flex justify-end gap-2">
+              <Bouton variante="secondaire" type="button" onClick={() => setModaleCreationOuverte(false)}>
+                Annuler
+              </Bouton>
+              <Bouton variante="primaire" type="submit" chargement={envoiEnCours}>
+                Envoyer
+              </Bouton>
+            </div>
           </form>
-        </Card>
-      )}
+        )}
+      </Modale>
 
-      <div className="mt-6 grid gap-4 md:grid-cols-2">
-        <Card title="Historique">
-          <ul className="divide-y divide-encre-nocturne/10 text-sm">
-            {reclamations.map((r) => (
-              <li key={r.id} className="py-2">
-                <button onClick={() => openDetail(r.id)} className="w-full text-left hover:text-indigo-trajectoire">
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium">{r.sujet}</span>
-                    <span className={`rounded-full px-2 py-0.5 text-xs ${STATUT_STYLES[r.statut]}`}>
-                      {STATUT_LABELS[r.statut]}
-                    </span>
-                  </div>
-                  <span className="text-xs text-encre-nocturne/50">
-                    {new Date(r.date_creation).toLocaleDateString("fr-FR")}
-                  </span>
-                </button>
-              </li>
-            ))}
-            {reclamations.length === 0 && (
-              <li className="py-6 text-center text-encre-nocturne/50">Aucune reclamation pour le moment.</li>
-            )}
-          </ul>
-        </Card>
+      {/* ============================================================ Detail */}
+      <Modale
+        ouverte={reclamationOuverte != null}
+        onFermer={() => setReclamationOuverte(null)}
+        titre={reclamationOuverte?.sujet}
+        sousTitre={
+          reclamationOuverte
+            ? `${reclamationOuverte.matiere ? `${reclamationOuverte.matiere} · ` : ""}${
+                reclamationOuverte.enseignant ?? "Enseignant non assigne"
+              }`
+            : undefined
+        }
+        taille="lg"
+      >
+        {reclamationOuverte && (
+          <div>
+            <div className="mb-3">
+              <Badge ton={STATUT_TONS[reclamationOuverte.statut]}>
+                {STATUT_LABELS[reclamationOuverte.statut]}
+              </Badge>
+            </div>
 
-        <Card title={selected ? selected.sujet : "Detail"}>
-          {!selected ? (
-            <p className="text-sm text-encre-nocturne/50">Selectionnez une reclamation pour voir l'echange.</p>
-          ) : (
-            <div>
-              <div className="max-h-64 space-y-3 overflow-y-auto">
-                {selected.messages.map((m) => (
+            {chargementDetail ? (
+              <div className="space-y-2">
+                {Array.from({ length: 3 }).map((_, index) => (
+                  <Squelette key={index} className="h-14 rounded-lg" />
+                ))}
+              </div>
+            ) : (
+              <div className="max-h-96 space-y-3 overflow-y-auto">
+                {reclamationOuverte.messages.map((m) => (
                   <div
                     key={m.id}
-                    className={`rounded-md p-2 text-sm ${m.auteur_role === "etudiant" ? "bg-brume-academique" : "bg-indigo-trajectoire/10"}`}
+                    className={`rounded-lg p-3 text-sm ${
+                      m.auteur_role === "etudiant" ? "bg-ardoise-50" : "bg-indigo-50"
+                    }`}
                   >
-                    <p className="text-xs font-medium text-encre-nocturne/60">
-                      {m.auteur_role === "etudiant" ? "Vous" : "Administration"} ·{" "}
+                    <p className="text-xs font-medium text-ardoise-500">
+                      {m.auteur_role === "etudiant" ? "Vous" : reclamationOuverte.enseignant ?? "Enseignant"} ·{" "}
                       {new Date(m.date_envoi).toLocaleString("fr-FR")}
                     </p>
-                    <p className="mt-1">{m.message}</p>
+                    <p className="mt-1 text-encre-900">{m.message}</p>
                   </div>
                 ))}
               </div>
-              <form onSubmit={submitReply} className="mt-3 flex gap-2">
-                <input
-                  value={reply}
-                  onChange={(e) => setReply(e.target.value)}
-                  placeholder="Repondre..."
-                  className="focus-ring flex-1 rounded-md border border-encre-nocturne/20 px-3 py-2 text-sm"
-                />
-                <Button type="submit">Envoyer</Button>
-              </form>
-            </div>
-          )}
-        </Card>
-      </div>
-    </DashboardLayout>
+            )}
+
+            <form onSubmit={envoyerReponse} className="mt-4 flex gap-2 border-t border-ardoise-200 pt-4">
+              <input
+                value={reponse}
+                onChange={(e) => setReponse(e.target.value)}
+                placeholder="Repondre a l'enseignant..."
+                className="anneau-focus flex-1 rounded-lg border border-ardoise-300 px-3 py-2 text-sm"
+              />
+              <Bouton variante="primaire" type="submit" chargement={envoiReponseEnCours}>
+                Envoyer
+              </Bouton>
+            </form>
+          </div>
+        )}
+      </Modale>
+    </CoqueApplication>
   );
 }

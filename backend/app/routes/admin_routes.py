@@ -9,17 +9,17 @@ from flask_jwt_extended import get_jwt_identity, jwt_required
 from app.academic import ALL_SEMESTRES, NIVEAUX
 from app.auth import role_required
 from app.extensions import db
-from app.utils.validators import validate_password
+from app.utils.validators import validate_password, validate_institutional_email
 from app.models import (
     AccountStatusHistory,
     Alert,
     Classe,
     CourseSession,
+    DemandeRattrapage,
     Filiere,
     Grade,
     Prediction,
     Reclamation,
-    ReclamationMessage,
     Student,
     Teacher,
     TeacherAssignment,
@@ -28,6 +28,14 @@ from app.models import (
 from app.services import attendance_rates_by_semestre, compute_and_store_prediction
 from app.utils.pagination import paginate_list
 from app.utils.reports import build_predictions_pdf
+from app.utils.email import test_smtp_diagnostic
+from app.utils.student_import_export import (
+    parse_student_file_to_rows,
+    validate_student_data,
+    execute_student_import_batch,
+    generate_template_response,
+    export_students_dataset,
+)
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/api/admin")
 
@@ -117,7 +125,101 @@ def get_student(student_id):
     return jsonify(data), 200
 
 
+@admin_bp.get("/students/template")
+@jwt_required()
+@role_required("admin")
+def download_students_template():
+    """Télécharge un modèle CSV ou Excel sans colonne mot de passe."""
+    file_format = request.args.get("format", "csv").lower()
+    return generate_template_response(file_format=file_format)
+
+
+@admin_bp.post("/students/import-preview")
+@jwt_required()
+@role_required("admin")
+def preview_students_import():
+    """Prévisualise et valide les lignes du fichier d'importation avant enregistrement."""
+    if "file" not in request.files:
+        return jsonify({"error": "Aucun fichier téléversé."}), 400
+
+    file = request.files["file"]
+    if not file or not file.filename:
+        return jsonify({"error": "Nom de fichier invalide."}), 400
+
+    try:
+        raw_rows, headers = parse_student_file_to_rows(file)
+        validation_result = validate_student_data(raw_rows)
+        validation_result["headers_detected"] = headers
+        return jsonify(validation_result), 200
+    except ValueError as val_err:
+        return jsonify({"error": str(val_err)}), 400
+    except Exception as e:
+        return jsonify({"error": f"Erreur lors de l'analyse du fichier : {str(e)}"}), 500
+
+
+@admin_bp.post("/students/import")
+@jwt_required()
+@role_required("admin")
+def execute_students_import():
+    """Exécute l'importation définitive des lignes validées, crée les comptes et expédie les accès par email."""
+    data = request.get_json(silent=True) or {}
+    valid_rows = data.get("valid_rows", [])
+    send_emails = data.get("send_emails", True)
+
+    if not valid_rows or not isinstance(valid_rows, list):
+        return jsonify({"error": "Aucune ligne valide fournie pour l'importation."}), 400
+
+    result = execute_student_import_batch(valid_rows, send_emails=send_emails)
+    return jsonify(result), 200
+
+
+@admin_bp.get("/students/export")
+@jwt_required()
+@role_required("admin")
+def export_students():
+    """Exporte la liste des étudiants au format CSV ou Excel selon les filtres actifs."""
+    query = Student.query
+    filiere_id = request.args.get("filiere_id", type=int)
+    niveau = request.args.get("niveau")
+    classe_id = request.args.get("classe_id", type=int)
+    search = request.args.get("q")
+    file_format = request.args.get("format", "csv").lower()
+
+    if filiere_id or niveau or classe_id:
+        query = query.join(Classe, Student.classe_id == Classe.id)
+        if filiere_id:
+            query = query.filter(Classe.filiere_id == filiere_id)
+        if niveau:
+            query = query.filter(Classe.niveau == niveau)
+        if classe_id:
+            query = query.filter(Student.classe_id == classe_id)
+
+    if search:
+        like = f"%{search}%"
+        query = query.filter(
+            db.or_(
+                Student.nom.ilike(like),
+                Student.prenom.ilike(like),
+                Student.matricule.ilike(like),
+            )
+        )
+
+    return export_students_dataset(query, file_format=file_format)
+
+
+@admin_bp.post("/students/test-email")
+@jwt_required()
+@role_required("admin")
+def test_email_endpoint():
+    """Teste la configuration SMTP et l'envoi vers l'adresse indiquée avec rapport complet."""
+    data = request.get_json(silent=True) or {}
+    destinataire = data.get("email", "matymbaye6618@gmail.com")
+    diag_result = test_smtp_diagnostic(target_email=destinataire)
+    return jsonify(diag_result), 200
+
+
 @admin_bp.post("/students")
+
 @jwt_required()
 @role_required("admin")
 def create_student():
@@ -140,7 +242,21 @@ def create_student():
     if not is_valid:
         return jsonify({"error": err_msg}), 400
 
-    user = User(identifiant=data["identifiant"], email=data.get("email"), role="etudiant", statut="actif")
+    email_fourni = (data.get("email") or "").strip()
+    email_verifie_val = False
+    if email_fourni:
+        is_valid_email, err_email = validate_institutional_email(email_fourni)
+        if not is_valid_email:
+            return jsonify({"error": err_email}), 400
+        email_verifie_val = True
+
+    user = User(
+        identifiant=data["identifiant"],
+        email=email_fourni or None,
+        role="etudiant",
+        statut="actif",
+        email_verifie=email_verifie_val,
+    )
     user.set_password(data["mot_de_passe"])
     db.session.add(user)
     db.session.flush()
@@ -175,8 +291,20 @@ def update_student(student_id):
             return jsonify({"error": "Classe introuvable."}), 400
         student.classe_id = classe_id
 
+    if student.user and "email" in data:
+        email_modifie = (data.get("email") or "").strip()
+        if email_modifie:
+            is_valid_email, err_email = validate_institutional_email(email_modifie)
+            if not is_valid_email:
+                return jsonify({"error": err_email}), 400
+            student.user.email = email_modifie
+            student.user.email_verifie = True
+        else:
+            student.user.email = None
+
     db.session.commit()
     return jsonify(student.to_dict(include_user=True)), 200
+
 
 
 @admin_bp.delete("/students/<int:student_id>")
@@ -239,33 +367,94 @@ def add_grade(student_id):
 
 
 # ------------------------------------------------------------------
-# Gestion des comptes etudiants (FR-14 a FR-18)
+# Gestion des comptes utilisateurs (FR-14 a FR-18 + Nouveaux rôles)
 # ------------------------------------------------------------------
 @admin_bp.get("/accounts")
 @jwt_required()
 @role_required("admin")
 def list_accounts():
-    users = User.query.filter_by(role="etudiant").order_by(User.identifiant).all()
+    role_filtre = request.args.get("role")
+    query = User.query
+    if role_filtre:
+        query = query.filter_by(role=role_filtre)
+
+    users = query.order_by(User.identifiant).all()
     data = []
     for u in users:
         item = u.to_dict()
         if u.student:
-            item["etudiant"] = f"{u.student.prenom} {u.student.nom}"
+            item["nom_complet"] = f"{u.student.prenom} {u.student.nom}"
             item["matricule"] = u.student.matricule
+        elif u.teacher:
+            item["nom_complet"] = f"{u.teacher.prenom} {u.teacher.nom}"
+        else:
+            item["nom_complet"] = u.identifiant
         data.append(item)
     return jsonify(paginate_list(data)), 200
+
+
+@admin_bp.post("/accounts")
+@jwt_required()
+@role_required("admin")
+def create_account():
+    """Création directe d'un compte utilisateur (Assistante, Technicien, Enseignant, Admin)."""
+    data = request.get_json(silent=True) or {}
+    identifiant = (data.get("identifiant") or "").strip()
+    email = (data.get("email") or "").strip().lower()
+    mot_de_passe = data.get("mot_de_passe") or ""
+    role = data.get("role")
+
+    roles_valides = ("admin", "enseignant", "assistante_pedagogique", "technicien", "etudiant")
+    if role not in roles_valides:
+        return jsonify({"error": f"Rôle invalide. Rôles autorisés : {', '.join(roles_valides)}"}), 400
+
+    if not identifiant or not mot_de_passe:
+        return jsonify({"error": "Identifiant et mot de passe requis."}), 400
+
+    if User.query.filter_by(identifiant=identifiant).first():
+        return jsonify({"error": "Cet identifiant existe déjà."}), 409
+
+    # Vérification stricte du domaine institutionnel @groupeisi.com pour Assistante et Technicien
+    if role in ("assistante_pedagogique", "technicien"):
+        if not email:
+            return jsonify({"error": "L'adresse e-mail est obligatoire pour ce rôle."}), 400
+        is_valid_email, err_email = validate_institutional_email(email)
+        if not is_valid_email:
+            return jsonify({"error": err_email}), 400
+    elif email:
+        is_valid_email, err_email = validate_institutional_email(email)
+        if not is_valid_email:
+            return jsonify({"error": err_email}), 400
+
+    if email and User.query.filter_by(email=email).first():
+        return jsonify({"error": "Cette adresse e-mail est déjà associée à un compte."}), 409
+
+    is_valid_pwd, err_pwd = validate_password(mot_de_passe)
+    if not is_valid_pwd:
+        return jsonify({"error": err_pwd}), 400
+
+    user = User(
+        identifiant=identifiant,
+        email=email or None,
+        role=role,
+        statut="actif",
+        email_verifie=bool(email),
+    )
+    user.set_password(mot_de_passe)
+    db.session.add(user)
+    db.session.commit()
+
+    return jsonify({"message": "Compte créé avec succès.", "user": user.to_dict()}), 201
 
 
 @admin_bp.post("/accounts/<int:user_id>/toggle-status")
 @jwt_required()
 @role_required("admin")
 def toggle_account_status(user_id):
-    """Active ou desactive un compte etudiant (FR-14, FR-15).
-    Necessite confirmation cote frontend (modale) + motif (§5.4).
-    """
+    """Active ou désactive un compte utilisateur (FR-14, FR-15)."""
     user = User.query.get_or_404(user_id)
-    if user.role not in ("etudiant", "enseignant"):
-        return jsonify({"error": "Seuls les comptes etudiants et enseignants peuvent etre geres ici."}), 400
+    if user.role == "admin":
+        return jsonify({"error": "Le statut du compte administrateur ne peut pas être modifié."}), 400
 
     data = request.get_json(silent=True) or {}
     nouveau_statut = data.get("statut")
@@ -276,7 +465,7 @@ def toggle_account_status(user_id):
 
     ancien_statut = user.statut
     if ancien_statut == nouveau_statut:
-        return jsonify({"error": f"Le compte est deja {nouveau_statut}."}), 409
+        return jsonify({"error": f"Le compte est déjà {nouveau_statut}."}), 409
 
     admin_id = get_jwt_identity()
 
@@ -377,14 +566,14 @@ def update_filiere(filiere_id):
 # ------------------------------------------------------------------
 @admin_bp.get("/classes")
 @jwt_required()
-@role_required("admin")
+@role_required("admin", "assistante_pedagogique")
 def list_classes():
     return jsonify([c.to_dict(include_stats=True) for c in Classe.query.all()]), 200
 
 
 @admin_bp.get("/classes/<int:classe_id>")
 @jwt_required()
-@role_required("admin")
+@role_required("admin", "assistante_pedagogique")
 def get_classe(classe_id):
     classe = Classe.query.get_or_404(classe_id)
     data = classe.to_dict(include_stats=True)
@@ -432,6 +621,27 @@ def assign_teacher(classe_id):
     if TeacherAssignment.query.filter_by(teacher_id=teacher_id, classe_id=classe_id, matiere=matiere).first():
         return jsonify({"error": "Cette affectation existe deja."}), 409
 
+    # Une matiere ne peut avoir qu'un seul enseignant par classe : deux
+    # enseignants sur la meme matiere creeraient une ambiguite (qui saisit
+    # les notes ? qui fait l'appel ?) et fausseraient le suivi pedagogique.
+    affectation_existante = TeacherAssignment.query.filter_by(classe_id=classe_id, matiere=matiere).first()
+    if affectation_existante:
+        enseignant_actuel = affectation_existante.teacher
+        nom_enseignant = (
+            f"{enseignant_actuel.prenom} {enseignant_actuel.nom}" if enseignant_actuel else "un autre enseignant"
+        )
+        return (
+            jsonify(
+                {
+                    "error": (
+                        f"Cette matiere est deja attribuee a {nom_enseignant} pour cette classe. "
+                        "Veuillez choisir un autre enseignant ou modifier l'affectation existante."
+                    )
+                }
+            ),
+            409,
+        )
+
     assignment = TeacherAssignment(teacher_id=teacher_id, classe_id=classe_id, matiere=matiere)
     db.session.add(assignment)
     db.session.commit()
@@ -475,7 +685,21 @@ def create_teacher():
     if not is_valid:
         return jsonify({"error": err_msg}), 400
 
-    user = User(identifiant=data["identifiant"], email=data.get("email"), role="enseignant", statut="actif")
+    email_fourni = (data.get("email") or "").strip()
+    email_verifie_val = False
+    if email_fourni:
+        is_valid_email, err_email = validate_institutional_email(email_fourni)
+        if not is_valid_email:
+            return jsonify({"error": err_email}), 400
+        email_verifie_val = True
+
+    user = User(
+        identifiant=data["identifiant"],
+        email=email_fourni or None,
+        role="enseignant",
+        statut="actif",
+        email_verifie=email_verifie_val,
+    )
     user.set_password(data["mot_de_passe"])
     db.session.add(user)
     db.session.flush()
@@ -511,12 +735,21 @@ def update_teacher(teacher_id):
                 return jsonify({"error": "Cet identifiant existe deja."}), 409
             teacher.user.identifiant = data["identifiant"]
         if "email" in data:
-            teacher.user.email = data["email"]
+            email_modifie = (data.get("email") or "").strip()
+            if email_modifie:
+                is_valid_email, err_email = validate_institutional_email(email_modifie)
+                if not is_valid_email:
+                    return jsonify({"error": err_email}), 400
+                teacher.user.email = email_modifie
+                teacher.user.email_verifie = True
+            else:
+                teacher.user.email = None
         if data.get("mot_de_passe"):
             is_valid, err_msg = validate_password(data["mot_de_passe"])
             if not is_valid:
                 return jsonify({"error": err_msg}), 400
             teacher.user.set_password(data["mot_de_passe"])
+
 
     db.session.commit()
     return jsonify(teacher.to_dict(include_user=True)), 200
@@ -626,7 +859,13 @@ def predictions_stats():
 
 
 # ------------------------------------------------------------------
-# Reclamations (§3.4)
+# Reclamations (§3.4) - lecture seule cote administration
+#
+# Les reclamations sont desormais echangees directement entre l'etudiant et
+# l'enseignant de la matiere concernee (app/routes/student_routes.py et
+# app/routes/teacher_routes.py). L'administration en garde une vue de
+# supervision, mais ne repond plus et ne modifie plus le statut : ecrire
+# ici court-circuiterait l'enseignant en charge du dossier.
 # ------------------------------------------------------------------
 @admin_bp.get("/reclamations")
 @jwt_required()
@@ -646,37 +885,6 @@ def list_reclamations():
 def get_reclamation(reclamation_id):
     reclamation = Reclamation.query.get_or_404(reclamation_id)
     return jsonify(reclamation.to_dict(include_messages=True)), 200
-
-
-@admin_bp.post("/reclamations/<int:reclamation_id>/messages")
-@jwt_required()
-@role_required("admin")
-def reply_reclamation(reclamation_id):
-    reclamation = Reclamation.query.get_or_404(reclamation_id)
-    data = request.get_json(silent=True) or {}
-    message = (data.get("message") or "").strip()
-    if not message:
-        return jsonify({"error": "Le message ne peut pas etre vide."}), 400
-
-    db.session.add(ReclamationMessage(reclamation_id=reclamation.id, auteur_role="admin", message=message))
-    if reclamation.statut == "nouvelle":
-        reclamation.statut = "en_cours"
-    db.session.commit()
-    return jsonify(reclamation.to_dict(include_messages=True)), 201
-
-
-@admin_bp.put("/reclamations/<int:reclamation_id>")
-@jwt_required()
-@role_required("admin")
-def update_reclamation_status(reclamation_id):
-    reclamation = Reclamation.query.get_or_404(reclamation_id)
-    data = request.get_json(silent=True) or {}
-    statut = data.get("statut")
-    if statut not in ("nouvelle", "en_cours", "resolue"):
-        return jsonify({"error": "Statut invalide."}), 400
-    reclamation.statut = statut
-    db.session.commit()
-    return jsonify(reclamation.to_dict()), 200
 
 
 # ------------------------------------------------------------------
@@ -803,3 +1011,117 @@ def rapport_comptes_desactives_csv():
         mimetype="text/csv",
         headers={"Content-Disposition": "attachment; filename=rapport_comptes_desactives.csv"},
     )
+
+
+# ------------------------------------------------------------------
+# Supervision des rattrapages : consultation globale & observations
+# ------------------------------------------------------------------
+@admin_bp.get("/rattrapages")
+@jwt_required()
+@role_required("admin")
+def list_supervision_rattrapages():
+    """Supervision globale de tous les rattrapages de l'etablissement."""
+    statut = request.args.get("statut")
+    matiere = request.args.get("matiere")
+    teacher_id = request.args.get("teacher_id", type=int)
+    filiere_id = request.args.get("filiere_id", type=int)
+    classe_id = request.args.get("classe_id", type=int)
+    date_debut = request.args.get("date_debut")
+    date_fin = request.args.get("date_fin")
+    recherche = (request.args.get("recherche") or "").strip().lower()
+
+    query = DemandeRattrapage.query
+
+    # Filtres relationnels et temporels
+    if statut:
+        query = query.filter_by(statut=statut)
+    if matiere:
+        query = query.filter_by(matiere=matiere)
+    if teacher_id:
+        query = query.filter_by(teacher_id=teacher_id)
+    if date_debut:
+        try:
+            d_deb = datetime.strptime(date_debut, "%Y-%m-%d")
+            query = query.filter(DemandeRattrapage.date_demande >= d_deb)
+        except ValueError:
+            pass
+    if date_fin:
+        try:
+            d_fin = datetime.strptime(date_fin + " 23:59:59", "%Y-%m-%d %H:%M:%S")
+            query = query.filter(DemandeRattrapage.date_demande <= d_fin)
+        except ValueError:
+            pass
+
+    demandes = query.order_by(DemandeRattrapage.date_demande.desc()).all()
+    demandes_dicts = [d.to_dict() for d in demandes]
+
+    # Filtres applicatifs (sur student / classe / filiere / recherche)
+    if classe_id:
+        demandes_dicts = [d for d in demandes_dicts if d.get("classe_id") == classe_id]
+
+    if filiere_id:
+        # Trouver les classes de la filiere
+        classes_filiere = {c.id for c in Classe.query.filter_by(filiere_id=filiere_id).all()}
+        demandes_dicts = [d for d in demandes_dicts if d.get("classe_id") in classes_filiere]
+
+    if recherche:
+        demandes_dicts = [
+            d for d in demandes_dicts
+            if (
+                (d.get("etudiant") and recherche in d["etudiant"].lower())
+                or (d.get("matricule") and recherche in d["matricule"].lower())
+                or (d.get("matiere") and recherche in d["matiere"].lower())
+                or (d.get("enseignant") and recherche in d["enseignant"].lower())
+                or (d.get("motif") and recherche in d["motif"].lower())
+                or (d.get("classe") and recherche in d["classe"].lower())
+            )
+        ]
+
+    # Statistiques globales calculees sur l'ensemble de la base
+    toutes_les_demandes = DemandeRattrapage.query.all()
+    stats = {
+        "total": len(toutes_les_demandes),
+        "en_attente": sum(1 for d in toutes_les_demandes if d.statut == "en_attente"),
+        "acceptees": sum(1 for d in toutes_les_demandes if d.statut == "acceptee"),
+        "planifiees": sum(1 for d in toutes_les_demandes if d.statut in ("planifiee", "programmee")),
+        "terminees": sum(1 for d in toutes_les_demandes if d.statut == "terminee"),
+        "refusees": sum(1 for d in toutes_les_demandes if d.statut == "refusee"),
+    }
+
+    return jsonify({
+        "demandes": demandes_dicts,
+        "stats": stats
+    }), 200
+
+
+@admin_bp.get("/rattrapages/<int:demande_id>")
+@jwt_required()
+@role_required("admin")
+def get_supervision_rattrapage(demande_id):
+    demande = DemandeRattrapage.query.get_or_404(demande_id)
+    return jsonify(demande.to_dict()), 200
+
+
+@admin_bp.post("/rattrapages/<int:demande_id>/observation")
+@jwt_required()
+@role_required("admin")
+def add_admin_observation(demande_id):
+    """Permet a l'administrateur d'enregistrer une observation de suivi sans modifier la decision pedagogique."""
+    demande = DemandeRattrapage.query.get_or_404(demande_id)
+    current_user_id = get_jwt_identity()
+    admin_user = User.query.get(current_user_id)
+
+    data = request.get_json(silent=True) or {}
+    observation = (data.get("observation") or "").strip()
+
+    demande.observation_admin = observation if observation else None
+    demande.date_observation_admin = datetime.utcnow() if observation else None
+    demande.auteur_observation_admin = (
+        f"{admin_user.identifiant} ({admin_user.role})" if admin_user else "Administration"
+    ) if observation else None
+
+    db.session.commit()
+    return jsonify({
+        "message": "Observation administrative enregistree avec succes.",
+        "demande": demande.to_dict()
+    }), 200

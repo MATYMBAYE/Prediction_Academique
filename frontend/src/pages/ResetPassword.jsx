@@ -38,60 +38,70 @@ export default function ResetPassword() {
   };
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-brume-academique px-4 text-center">
-      <Logo size={40} />
-      <div className="mt-8 w-full max-w-sm rounded-card bg-white p-8 shadow-card text-left">
-        <h1 className="text-center font-display text-lg font-semibold text-encre-nocturne">
-          Nouveau mot de passe
-        </h1>
+    <div className="bg-isi-bleu flex min-h-screen flex-col items-center justify-center px-4 text-center">
+      <div className="mb-6 flex justify-center">
+        <span className="inline-flex rounded-xl bg-white/10 p-3 shadow-elevee backdrop-blur-md">
+          <Logo size={40} />
+        </span>
+      </div>
+
+      <div className="light light-1"></div>
+      <div className="light light-2"></div>
+
+      <div className="glass-form relative z-10 mt-8 w-full max-w-sm p-8 text-left overflow-hidden">
+        <div className="relative z-10">
+          <h1 className="text-center font-display text-lg font-semibold text-encre-900">
+            Nouveau mot de passe
+          </h1>
 
         {!token && (
-          <p className="mt-4 rounded-md bg-brique-alerte/10 px-3 py-2 text-sm text-brique-alerte">
+          <p className="mt-4 rounded-md bg-brique-alerte/15 border border-brique-alerte/30 px-3 py-2 text-sm text-brique-700 font-medium">
             Lien de reinitialisation manquant ou invalide.
           </p>
         )}
 
         {success ? (
-          <p className="mt-6 rounded-md bg-sauge-reussite/10 px-3 py-2 text-sm text-sauge-reussite">
+          <p className="mt-6 rounded-md bg-sauge-reussite/15 border border-sauge-reussite/30 px-3 py-2 text-sm text-sauge-700 font-medium">
             Mot de passe reinitialise. Redirection vers la connexion...
           </p>
         ) : (
           <form onSubmit={handleSubmit} className="mt-6 space-y-4">
             <div>
-              <label className="mb-1 block text-sm font-medium text-encre-nocturne">Nouveau mot de passe</label>
+              <label className="mb-1 block text-sm font-medium text-encre-900">Nouveau mot de passe</label>
               <input
                 type="password"
                 required
                 minLength={8}
                 value={motDePasse}
                 onChange={(e) => setMotDePasse(e.target.value)}
-                className="focus-ring w-full rounded-md border border-encre-nocturne/20 px-3 py-2 text-sm"
+                className="input-glace"
               />
-              <p className="mt-1 text-xs text-encre-nocturne/60">
+              <p className="mt-1 text-xs text-encre-700/80">
                 Min 8 caractères, 1 majuscule, 1 minuscule, 1 chiffre, 1 caractère spécial.
               </p>
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-encre-nocturne">Confirmation</label>
+              <label className="mb-1 block text-sm font-medium text-encre-900">Confirmation</label>
               <input
                 type="password"
                 required
                 minLength={8}
                 value={confirmation}
                 onChange={(e) => setConfirmation(e.target.value)}
-                className="focus-ring w-full rounded-md border border-encre-nocturne/20 px-3 py-2 text-sm"
+                className="input-glace"
               />
             </div>
-            {error && <p className="text-sm text-brique-alerte">{error}</p>}
+            {error && <p className="text-sm font-medium text-brique-700">{error}</p>}
             <Button type="submit" disabled={submitting || !token} className="w-full">
               {submitting ? "Enregistrement..." : "Reinitialiser le mot de passe"}
             </Button>
           </form>
         )}
 
-        <Link to="/connexion" className="mt-6 block text-center text-sm text-indigo-trajectoire hover:underline">
+        <Link to="/connexion" className="mt-6 block text-center text-sm font-medium text-indigo-700 hover:text-indigo-900 hover:underline">
           Retour a la connexion
         </Link>
+        </div>
       </div>
     </div>
   );
