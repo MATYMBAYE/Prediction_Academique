@@ -1,18 +1,18 @@
 # ========================================================
-# ÉTAPE 1 : Compilation du Frontend React (Vite)
+# ÉTAPE 1 : Compilation du Frontend React
 # ========================================================
 FROM node:20-alpine AS frontend-builder
 
 WORKDIR /app/frontend
 
-COPY frontend/package*.json ./
-RUN npm ci
+COPY frontend/package.json ./
+RUN npm install
 
 COPY frontend/ ./
 RUN npm run build
 
 # ========================================================
-# ÉTAPE 2 : Serveur de Production Flask + IA + Base de données
+# ÉTAPE 2 : Serveur de Production Flask + IA
 # ========================================================
 FROM python:3.11-slim
 
@@ -23,9 +23,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-# Dépendances système de base
+# Outils système essentiels
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
@@ -33,7 +32,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY backend/requirements.txt ./backend/
 RUN pip install --no-cache-dir -r ./backend/requirements.txt
 
-# Copie du backend complet
+# Copie du backend
 COPY backend/ ./backend/
 
 # Copie du build React généré à l'étape 1
