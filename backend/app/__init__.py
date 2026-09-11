@@ -43,6 +43,24 @@ def create_app(config_class=Config):
     def health():
         return jsonify({"status": "ok", "service": "Prediction Academique API"}), 200
 
+    import os
+    from flask import send_from_directory, request
+
+    dist_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "frontend", "dist"))
+
+    @app.route("/", defaults={"path": ""})
+    @app.route("/<path:path>")
+    def serve_frontend(path):
+        if path.startswith("api/"):
+            return jsonify({"error": "Ressource introuvable."}), 404
+        file_path = os.path.join(dist_dir, path)
+        if path and os.path.exists(file_path) and os.path.isfile(file_path):
+            return send_from_directory(dist_dir, path)
+        index_file = os.path.join(dist_dir, "index.html")
+        if os.path.exists(index_file):
+            return send_from_directory(dist_dir, "index.html")
+        return jsonify({"status": "ok", "service": "Prediction Academique API"}), 200
+
     # ----------------------------------------------------------------------
     # AUTHENTIFICATION
     # ----------------------------------------------------------------------
@@ -76,6 +94,11 @@ def create_app(config_class=Config):
 
     @app.errorhandler(404)
     def erreur_introuvable(error):
+        if request.path.startswith("/api/"):
+            return jsonify({"error": "Ressource introuvable."}), 404
+        index_file = os.path.join(dist_dir, "index.html")
+        if os.path.exists(index_file):
+            return send_from_directory(dist_dir, "index.html")
         return jsonify({"error": "Ressource introuvable."}), 404
 
     @app.errorhandler(500)
@@ -96,3 +119,4 @@ def create_app(config_class=Config):
         )
 
     return app
+

@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  # ========================================================
+  # 1. Base de données relationnelle MySQL
+  # ========================================================
+  db:
+    image: mysql:8.0
+    container_name: isi_prediction_db
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: Prediction_db
+      MYSQL_USER: isi_user
+      MYSQL_PASSWORD: isi_password123
+      MYSQL_ROOT_PASSWORD: root_password123
+    ports:
+      - "3307:3306" # Port 3307 externe pour éviter tout conflit avec XAMPP (3306)
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./backend/database/schema.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot_password123"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
+  # ========================================================
+  # 2. Application Unifiée (Frontend React + Backend Flask + IA)
+  # ========================================================
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: isi_prediction_app
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      - DB_HOST=db
+      - DB_PORT=3306
+      - DB_USER=isi_user
+      - DB_PASSWORD=isi_password123
+      - DB_NAME=Prediction_db
+      - SECRET_KEY=isi-suptech-secret-key-2026
+      - JWT_SECRET_KEY=isi-suptech-jwt-secret-key-2026
+      - FRONTEND_ORIGIN=http://localhost:5000
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  mysql_data:
+    name: isi_prediction_mysql_data

@@ -1,0 +1,14 @@
+node_modules
+.git
+.vscode
+.agents
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.venv
+venv
+dist
+.env
+bin/*.exe
+scratch

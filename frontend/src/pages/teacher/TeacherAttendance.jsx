@@ -13,10 +13,10 @@ export default function TeacherAttendance() {
   const classeId = searchParams.get("classe");
   const matiere = searchParams.get("matiere");
   const niveau = searchParams.get("niveau");
-  const semestres = SEMESTRES_PAR_NIVEAU[niveau] || [];
+  const semestres = (niveau && SEMESTRES_PAR_NIVEAU[niveau]) || ["S1", "S2"];
 
   const [students, setStudents] = useState([]);
-  const [semestre, setSemestre] = useState(semestres[0] || "");
+  const [semestre, setSemestre] = useState(semestres[0] || "S1");
   const [dateCours, setDateCours] = useState(new Date().toISOString().slice(0, 10));
   const [statuts, setStatuts] = useState({});
   const [message, setMessage] = useState("");
@@ -34,6 +34,37 @@ export default function TeacherAttendance() {
   const [enregistrementEdition, setEnregistrementEdition] = useState(false);
   const [erreurEdition, setErreurEdition] = useState("");
   const [messageEdition, setMessageEdition] = useState("");
+
+  // Synchronisation du semestre quand le niveau est connu ou change
+  useEffect(() => {
+    if (niveau && SEMESTRES_PAR_NIVEAU[niveau]) {
+      const list = SEMESTRES_PAR_NIVEAU[niveau];
+      if (list.length > 0 && (!semestre || !list.includes(semestre))) {
+        setSemestre(list[0]);
+      }
+    } else if (!semestre) {
+      setSemestre("S1");
+    }
+  }, [niveau, semestre]);
+
+  // Si niveau non présent dans l'URL mais classeId sélectionnée
+  useEffect(() => {
+    if (classeId && !niveau) {
+      client
+        .get("/teacher/me/classes")
+        .then(({ data }) => {
+          const list = Array.isArray(data) ? data : [];
+          const found = list.find((c) => String(c.classe_id) === String(classeId));
+          if (found?.niveau && SEMESTRES_PAR_NIVEAU[found.niveau]) {
+            const nivSemestres = SEMESTRES_PAR_NIVEAU[found.niveau];
+            if (nivSemestres.length > 0) {
+              setSemestre(nivSemestres[0]);
+            }
+          }
+        })
+        .catch(() => {});
+    }
+  }, [classeId, niveau]);
 
   useEffect(() => {
     if (!classeId) return;
@@ -54,12 +85,39 @@ export default function TeacherAttendance() {
     e.preventDefault();
     setError("");
     setMessage("");
+
+    const semestresDispos = (niveau && SEMESTRES_PAR_NIVEAU[niveau]) || ["S1", "S2"];
+    const semestreAEnvoyer = semestre || semestresDispos[0] || "S1";
+
+    if (!classeId || !matiere || !dateCours) {
+      setError("Veuillez renseigner tous les champs obligatoires (classe, matière, date).");
+      return;
+    }
+
+    if (students.length === 0) {
+      setError("Aucun étudiant trouvé dans cette classe pour faire l'appel.");
+      return;
+    }
+
     setSubmitting(true);
     try {
-      const presences = students.map((s) => ({ student_id: s.id, statut: statuts[s.id] }));
-      await client.post("/teacher/appel", { classe_id: Number(classeId), matiere, semestre, date_cours: dateCours, presences });
-      setMessage("Appel enregistre avec succes.");
-      const { data } = await client.get("/teacher/appel/historique", { params: { classe_id: classeId, matiere } });
+      const presences = students.map((s) => ({
+        student_id: s.id,
+        statut: statuts[s.id] || "present",
+      }));
+
+      await client.post("/teacher/appel", {
+        classe_id: Number(classeId),
+        matiere,
+        semestre: semestreAEnvoyer,
+        date_cours: dateCours,
+        presences,
+      });
+
+      setMessage("Appel enregistré avec succès.");
+      const { data } = await client.get("/teacher/appel/historique", {
+        params: { classe_id: classeId, matiere },
+      });
       setHistorique(data);
     } catch (err) {
       setError(err.response?.data?.error || "Impossible d'enregistrer l'appel.");

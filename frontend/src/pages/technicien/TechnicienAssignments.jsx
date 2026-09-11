@@ -25,7 +25,8 @@ export default function TechnicienAssignments() {
   const [editId, setEditId] = useState(null);
   const [formClasseId, setFormClasseId] = useState("");
   const [formTeacherId, setFormTeacherId] = useState("");
-  const [formMatiere, setFormMatiere] = useState("");
+  const [selectedMatiereChoice, setSelectedMatiereChoice] = useState("");
+  const [customMatiere, setCustomMatiere] = useState("");
   const [modalError, setModalError] = useState("");
   const [modalSubmitting, setModalSubmitting] = useState(false);
 
@@ -78,7 +79,9 @@ export default function TechnicienAssignments() {
     setEditId(null);
     setFormClasseId(classes[0]?.id || "");
     setFormTeacherId(teachers[0]?.id || "");
-    setFormMatiere(matieres[0]?.nom || "");
+    const firstMatiere = matieres[0]?.nom || "";
+    setSelectedMatiereChoice(firstMatiere || "_autre_");
+    setCustomMatiere("");
     setModalError("");
     setShowModal(true);
   };
@@ -87,7 +90,14 @@ export default function TechnicienAssignments() {
     setEditId(a.id);
     setFormClasseId(a.classe_id);
     setFormTeacherId(a.teacher_id);
-    setFormMatiere(a.matiere);
+    const existsInList = matieres.some((m) => m.nom === a.matiere);
+    if (existsInList) {
+      setSelectedMatiereChoice(a.matiere);
+      setCustomMatiere("");
+    } else {
+      setSelectedMatiereChoice("_autre_");
+      setCustomMatiere(a.matiere);
+    }
     setModalError("");
     setShowModal(true);
   };
@@ -95,20 +105,27 @@ export default function TechnicienAssignments() {
   const handleSave = async (e) => {
     e.preventDefault();
     setModalError("");
+
+    const matiereFinale =
+      selectedMatiereChoice === "_autre_" ? customMatiere.trim() : selectedMatiereChoice.trim();
+
+    if (!matiereFinale) {
+      setModalError("Veuillez choisir ou saisir le nom de la matière.");
+      return;
+    }
+
     setModalSubmitting(true);
     try {
+      const payload = {
+        classe_id: formClasseId,
+        teacher_id: formTeacherId,
+        matiere: matiereFinale,
+      };
+
       if (editId) {
-        await client.put(`/technicien/assignments/${editId}`, {
-          classe_id: formClasseId,
-          teacher_id: formTeacherId,
-          matiere: formMatiere,
-        });
+        await client.put(`/technicien/assignments/${editId}`, payload);
       } else {
-        await client.post("/technicien/assignments", {
-          classe_id: formClasseId,
-          teacher_id: formTeacherId,
-          matiere: formMatiere,
-        });
+        await client.post("/technicien/assignments", payload);
       }
       setShowModal(false);
       fetchAssignments(page);
@@ -312,8 +329,8 @@ export default function TechnicienAssignments() {
                 <label className="block text-xs font-semibold text-encre-800 mb-1">Matière *</label>
                 <div className="space-y-2">
                   <select
-                    value={formMatiere}
-                    onChange={(e) => setFormMatiere(e.target.value)}
+                    value={selectedMatiereChoice}
+                    onChange={(e) => setSelectedMatiereChoice(e.target.value)}
                     className="w-full rounded-lg border border-ardoise-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
                   >
                     {(() => {
@@ -342,14 +359,15 @@ export default function TechnicienAssignments() {
                     })()}
                   </select>
 
-                  {formMatiere === "_autre_" && (
+                  {selectedMatiereChoice === "_autre_" && (
                     <input
                       type="text"
                       required
-                      placeholder="Nom de la matière..."
-                      value={formMatiere === "_autre_" ? "" : formMatiere}
-                      onChange={(e) => setFormMatiere(e.target.value)}
-                      className="w-full rounded-lg border border-ardoise-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
+                      placeholder="Saisissez le nom de la nouvelle matière..."
+                      value={customMatiere}
+                      onChange={(e) => setCustomMatiere(e.target.value)}
+                      autoFocus
+                      className="w-full rounded-lg border border-indigo-400 bg-indigo-50/20 px-3 py-2 text-sm text-encre-900 placeholder:text-ardoise-400 focus:border-indigo-600 focus:bg-white focus:outline-none"
                     />
                   )}
                 </div>

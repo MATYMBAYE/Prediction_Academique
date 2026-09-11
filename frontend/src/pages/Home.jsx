@@ -241,7 +241,208 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ============================================================ Section Expérience Mobile / Smartphone */}
+      <section className="bg-gradient-to-b from-white via-indigo-50/30 to-brume-academique py-20 border-t border-encre-nocturne/10 overflow-hidden">
+        <div className="mx-auto max-w-6xl px-4 md:px-8">
+          <div className="grid items-center gap-12 lg:grid-cols-12">
+            {/* Colonne Texte & Arguments */}
+            <div className="lg:col-span-6 space-y-6">
+              <div className="inline-flex items-center gap-2 rounded-full bg-indigo-100/80 px-3.5 py-1 text-xs font-semibold text-indigo-800 border border-indigo-200">
+                <span className="h-2 w-2 rounded-full bg-indigo-600 animate-pulse" />
+                Accessible sur Smartphone & Ordinateur
+              </div>
+
+              <h2 className="font-display text-2xl font-bold text-encre-nocturne sm:text-3xl md:text-4xl leading-tight">
+                Votre suivi académique, accessible partout et <span className="text-indigo-trajectoire">directement dans votre poche</span>
+              </h2>
+
+              <p className="text-base text-encre-nocturne/80 leading-relaxed">
+                L'application a été entièrement optimisée pour offrir une expérience mobile fluide et intuitive.
+                Chaque étudiant peut désormais suivre son parcours, anticiper ses difficultés et interagir avec ses enseignants en toute simplicité, où qu'il soit.
+              </p>
+
+              <div className="grid gap-4 sm:grid-cols-2 pt-2">
+                <div className="flex items-start gap-3 rounded-xl bg-white p-3.5 shadow-sm border border-slate-200/80">
+                  <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-indigo-50 text-indigo-600 font-bold">
+                    📱
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-semibold text-encre-nocturne">Consultation nomade</h4>
+                    <p className="text-xs text-encre-nocturne/70 mt-0.5">Accès instantané aux notes, absences et moyennes 24h/24.</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3 rounded-xl bg-white p-3.5 shadow-sm border border-slate-200/80">
+                  <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-emerald-50 text-emerald-600 font-bold">
+                    🎯
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-semibold text-encre-nocturne">Prédictions IA en direct</h4>
+                    <p className="text-xs text-encre-nocturne/70 mt-0.5">Calcul immédiat du risque et probabilité de réussite en continu.</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3 rounded-xl bg-white p-3.5 shadow-sm border border-slate-200/80">
+                  <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-ambre-50 text-ambre-600 font-bold">
+                    ⚡
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-semibold text-encre-nocturne">Rattrapages & Soutien</h4>
+                    <p className="text-xs text-encre-nocturne/70 mt-0.5">Formulez vos demandes et suivez les réponses en 1 clic.</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3 rounded-xl bg-white p-3.5 shadow-sm border border-slate-200/80">
+                  <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-indigo-50 text-indigo-600 font-bold">
+                    🔒
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-semibold text-encre-nocturne">Sécurité & Confidentialité</h4>
+                    <p className="text-xs text-encre-nocturne/70 mt-0.5">Accès personnel chiffré et protection totale des données.</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-2">
+                <Link to="/connexion">
+                  <Button className="flex items-center gap-2 shadow-card hover:shadow-elevee">
+                    <span>Tester sur votre mobile</span>
+                    <Icone.ChevronDroite className="h-4 w-4" />
+                  </Button>
+                </Link>
+              </div>
+            </div>
+
+            {/* Colonne Mockup Smartphone Réaliste */}
+            <div className="lg:col-span-6 flex justify-center items-center">
+              <div className="relative w-full max-w-[320px] rounded-[48px] border-[10px] border-slate-900 bg-slate-900 p-2 shadow-2xl ring-1 ring-black/20">
+                {/* Dynamic Island / Notch */}
+                <div className="absolute left-1/2 top-4 h-4 w-28 -translate-x-1/2 rounded-full bg-black z-30 flex items-center justify-end pr-2">
+                  <span className="h-2 w-2 rounded-full bg-slate-800/80" />
+                </div>
+
+                {/* Écran du smartphone avec Dashboard Étudiant */}
+                <div className="relative h-[620px] w-full overflow-hidden rounded-[38px] bg-slate-900 text-white font-sans flex flex-col">
+                  {/* Orbes décoratifs Liquid Glass */}
+                  <div className="pointer-events-none absolute -left-10 -top-10 h-40 w-40 rounded-full bg-indigo-500/20 blur-2xl" />
+                  <div className="pointer-events-none absolute -right-10 top-40 h-40 w-40 rounded-full bg-sky-500/20 blur-2xl" />
+
+                  {/* Barre d'état mobile */}
+                  <div className="flex items-center justify-between px-6 pt-3 pb-1 text-[11px] font-semibold text-white/70">
+                    <span>09:41</span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px]">5G</span>
+                      <span className="h-2.5 w-4 rounded-sm border border-white/70 bg-white/90 inline-block" />
+                    </div>
+                  </div>
+
+                  {/* Header de l'application dans le mobile */}
+                  <div className="px-5 pt-3 pb-2 flex items-center justify-between border-b border-white/10">
+                    <div className="flex items-center gap-2">
+                      <div className="grid h-7 w-7 place-items-center rounded-lg bg-indigo-600 font-black text-xs text-white shadow-sm">
+                        ISI
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold leading-tight text-white">ISI SUPTECH</div>
+                        <div className="text-[10px] text-white/50">Espace Étudiant</div>
+                      </div>
+                    </div>
+                    <span className="h-2 w-2 rounded-full bg-emerald-400 ring-4 ring-emerald-400/20" />
+                  </div>
+
+                  {/* Contenu scrollable du Dashboard Étudiant */}
+                  <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
+                    {/* Profil rapide */}
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="text-xs text-white/60">Bonjour,</div>
+                        <div className="text-sm font-bold text-white">Awa Diop 👋</div>
+                      </div>
+                      <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-semibold text-indigo-200 border border-white/10">
+                        GL - L1
+                      </span>
+                    </div>
+
+                    {/* Carte Liquid Glass : Résultat de Prédiction Random Forest */}
+                    <div className="rounded-2xl border border-white/20 bg-white/10 backdrop-blur-md p-3.5 shadow-lg space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-semibold text-white/70">Prédiction IA</span>
+                        <span className="rounded-full bg-emerald-500/20 text-emerald-300 px-2 py-0.5 text-[10px] font-bold border border-emerald-500/30">
+                          Risque Faible
+                        </span>
+                      </div>
+                      <div className="flex items-baseline gap-1">
+                        <span className="font-display text-2xl font-bold text-white">88%</span>
+                        <span className="text-[10px] text-white/60">probabilité de succès</span>
+                      </div>
+                      <div className="h-1.5 w-full rounded-full bg-white/10 overflow-hidden">
+                        <div className="h-full bg-emerald-400 rounded-full w-[88%]" />
+                      </div>
+                    </div>
+
+                    {/* Mini Cartes Stats */}
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="rounded-xl border border-white/15 bg-white/10 backdrop-blur-md p-2.5">
+                        <div className="text-[10px] text-white/60">Moyenne générale</div>
+                        <div className="text-base font-bold text-white mt-0.5">14.8 <span className="text-[10px] text-white/50">/20</span></div>
+                      </div>
+                      <div className="rounded-xl border border-white/15 bg-white/10 backdrop-blur-md p-2.5">
+                        <div className="text-[10px] text-white/60">Assiduité</div>
+                        <div className="text-base font-bold text-emerald-400 mt-0.5">95%</div>
+                      </div>
+                    </div>
+
+                    {/* Section Mes Rattrapages */}
+                    <div className="rounded-xl border border-white/15 bg-white/10 backdrop-blur-md p-3 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-semibold text-white">Mes Rattrapages</span>
+                        <span className="text-[10px] text-indigo-300 font-medium">1 en cours</span>
+                      </div>
+                      <div className="flex items-center justify-between rounded-lg bg-black/20 p-2 text-[11px]">
+                        <div>
+                          <div className="font-semibold text-white">Algorithmique</div>
+                          <div className="text-[9px] text-white/50">Mercredi • Salle B204</div>
+                        </div>
+                        <span className="rounded bg-indigo-500/30 px-1.5 py-0.5 text-[9px] font-bold text-indigo-200">
+                          Planifié
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Barre de navigation basse du smartphone */}
+                  <div className="border-t border-white/10 bg-slate-900/90 px-6 py-2 flex items-center justify-between text-white/50 text-[10px]">
+                    <div className="flex flex-col items-center text-indigo-400 font-semibold">
+                      <span>📊</span>
+                      <span>Accueil</span>
+                    </div>
+                    <div className="flex flex-col items-center">
+                      <span>📝</span>
+                      <span>Notes</span>
+                    </div>
+                    <div className="flex flex-col items-center">
+                      <span>📅</span>
+                      <span>Rattrapages</span>
+                    </div>
+                    <div className="flex flex-col items-center">
+                      <span>👤</span>
+                      <span>Profil</span>
+                    </div>
+                  </div>
+
+                  {/* Home indicator */}
+                  <div className="pb-1 pt-0.5 flex justify-center">
+                    <div className="h-1 w-24 rounded-full bg-white/30" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <footer id="contact" className="border-t border-encre-nocturne/10 bg-encre-nocturne py-10 text-white">
+
         <div className="mx-auto max-w-6xl px-4 md:px-8">
 
           <div className="flex flex-col justify-between gap-4 sm:flex-row">
