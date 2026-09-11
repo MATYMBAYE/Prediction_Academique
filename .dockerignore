@@ -8,7 +8,6 @@ __pycache__
 *.pyd
 .venv
 venv
-dist
 .env
 bin/*.exe
 scratch
