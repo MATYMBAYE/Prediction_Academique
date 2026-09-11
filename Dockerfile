@@ -1,18 +1,5 @@
 # ========================================================
-# ÉTAPE 1 : Compilation du Frontend React
-# ========================================================
-FROM node:20-alpine AS frontend-builder
-
-WORKDIR /app/frontend
-
-COPY frontend/package.json ./
-RUN npm install
-
-COPY frontend/ ./
-RUN npm run build
-
-# ========================================================
-# ÉTAPE 2 : Serveur de Production Flask + IA
+# Image de Production ISI-SUPTECH (Python Flask + IA + React)
 # ========================================================
 FROM python:3.11-slim
 
@@ -32,11 +19,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY backend/requirements.txt ./backend/
 RUN pip install --no-cache-dir -r ./backend/requirements.txt
 
-# Copie du backend
+# Copie du backend complet et du build React
 COPY backend/ ./backend/
-
-# Copie du build React généré à l'étape 1
-COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
+COPY frontend/dist/ ./frontend/dist/
 
 WORKDIR /app/backend
 
