@@ -7,10 +7,24 @@ export default defineConfig({
   server: {
     host: true,      // Ecoute sur toutes les interfaces (localhost + IP reseau)
     port: 5173,
+    cors: true,
+    allowedHosts: true,
     // Le proxy evite les erreurs CORS en developpement et permet d'utiliser
     // des chemins relatifs (/api/...) identiques a ceux de la production.
     // On pointe explicitement vers 127.0.0.1 pour eviter toute ambiguite
     // IPv4/IPv6 sous Windows.
+    proxy: {
+      "/api": {
+        target: "http://127.0.0.1:5000",
+        changeOrigin: true,
+        secure: false,
+      },
+    },
+  },
+  preview: {
+    host: true,
+    port: 5173,
+    allowedHosts: true,
     proxy: {
       "/api": {
         target: "http://127.0.0.1:5000",

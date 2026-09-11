@@ -1,0 +1,18 @@
+{
+  "include": [
+    "backend"
+  ],
+  "extraPaths": [
+    "backend"
+  ],
+  "venvPath": "backend",
+  "venv": "venv",
+  "typeCheckingMode": "off",
+  "reportCallIssue": false,
+  "reportArgumentType": false,
+  "reportGeneralTypeIssues": false,
+  "reportOptionalMemberAccess": false,
+  "reportAttributeAccessIssue": false,
+  "reportMissingImports": false,
+  "reportMissingTypeStubs": false
+}

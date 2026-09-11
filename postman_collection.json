@@ -1,0 +1,615 @@
+{
+  "info": {
+    "_postman_id": "a8f1e92d-4c32-4752-9b23-prediction-academique-isi",
+    "name": "Prédiction Académique ISI - API Collection",
+    "description": "Collection complète et prête à l'emploi pour tester l'ensemble des API du projet Prédiction Académique (ISI).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "00. Diagnostic & Santé",
+      "item": [
+        {
+          "name": "Vérifier la santé de l'API (Health Check)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/health",
+              "host": ["{{base_url}}"],
+              "path": ["health"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "01. Authentification (/api/auth)",
+      "item": [
+        {
+          "name": "1. Connexion Admin (Auto-Save Token)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var data = pm.response.json();",
+                  "    if (data.access_token) {",
+                  "        pm.environment.set('token', data.access_token);",
+                  "        console.log('✅ Token JWT ADMIN enregistré avec succès.');",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"identifiant\": \"admin\",\n  \"mot_de_passe\": \"Admin@1234\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "2. Connexion Enseignant (Auto-Save Token)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var data = pm.response.json();",
+                  "    if (data.access_token) {",
+                  "        pm.environment.set('token', data.access_token);",
+                  "        console.log('✅ Token JWT ENSEIGNANT enregistré avec succès.');",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"identifiant\": \"omar.seck2\",\n  \"mot_de_passe\": \"Enseignant@1234\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "3. Connexion Étudiant (Auto-Save Token)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var data = pm.response.json();",
+                  "    if (data.access_token) {",
+                  "        pm.environment.set('token', data.access_token);",
+                  "        console.log('✅ Token JWT ÉTUDIANT enregistré avec succès.');",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"identifiant\": \"aminata.fall1\",\n  \"mot_de_passe\": \"Etudiant@1234\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "4. Mon Profil Connecté (/auth/me)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/auth/me",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "me"]
+            }
+          }
+        },
+        {
+          "name": "5. Demande de réinitialisation mot de passe",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@groupeisi.com\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/mot-de-passe-oublie",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "mot-de-passe-oublie"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "02. Machine Learning & Dashboard IA",
+      "item": [
+        {
+          "name": "1. Tableau de bord Administrateur (Agrégats & Risques)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin/dashboard",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "dashboard"]
+            }
+          }
+        },
+        {
+          "name": "2. Simulateur IA (Prédiction en direct)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"notes\": [13.5, 11.0, 14.5],\n  \"seances_totales\": 24,\n  \"seances_presentes\": 22\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/predictions/simuler",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "predictions", "simuler"]
+            }
+          }
+        },
+        {
+          "name": "3. Métriques de Performance du Modèle IA",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin/modele/metriques",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "modele", "metriques"]
+            }
+          }
+        },
+        {
+          "name": "4. Fiche détaillée Prédiction Étudiant",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/predictions/students/{{student_id}}/detail",
+              "host": ["{{base_url}}"],
+              "path": ["predictions", "students", "{{student_id}}", "detail"]
+            }
+          }
+        },
+        {
+          "name": "5. Recalculer toutes les prédictions",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin/predictions/recalculer",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "predictions", "recalculer"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "03. Espace Administration (/api/admin)",
+      "item": [
+        {
+          "name": "1. Vue d'ensemble (Overview)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin/overview",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "overview"]
+            }
+          }
+        },
+        {
+          "name": "2. Liste des Étudiants",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin/students?page=1&per_page=20",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "students"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "per_page", "value": "20" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "3. Liste des Classes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin/classes",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "classes"]
+            }
+          }
+        },
+        {
+          "name": "4. Liste des Filières",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin/filieres",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "filieres"]
+            }
+          }
+        },
+        {
+          "name": "5. Liste des Enseignants",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin/teachers",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "teachers"]
+            }
+          }
+        },
+        {
+          "name": "6. Liste des Comptes Utilisateurs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin/accounts",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "accounts"]
+            }
+          }
+        },
+        {
+          "name": "7. Activer / Désactiver un Compte",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"motif\": \"Test administratif\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/accounts/{{student_id}}/toggle-status",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "accounts", "{{student_id}}", "toggle-status"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "04. Espace Enseignant (/api/teacher)",
+      "item": [
+        {
+          "name": "1. Mes Classes & Matières affectées",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/teacher/me/classes",
+              "host": ["{{base_url}}"],
+              "path": ["teacher", "me", "classes"]
+            }
+          }
+        },
+        {
+          "name": "2. Étudiants de ma classe",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/teacher/classes/{{classe_id}}/students",
+              "host": ["{{base_url}}"],
+              "path": ["teacher", "classes", "{{classe_id}}", "students"]
+            }
+          }
+        },
+        {
+          "name": "3. Enregistrer un appel de présence",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"classe_id\": 1,\n  \"matiere\": \"Algorithmique\",\n  \"semestre\": \"S1\",\n  \"date_cours\": \"2026-09-11\",\n  \"presences\": [\n    { \"student_id\": 8, \"statut\": \"present\" },\n    { \"student_id\": 9, \"statut\": \"absent\" }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/teacher/appel",
+              "host": ["{{base_url}}"],
+              "path": ["teacher", "appel"]
+            }
+          }
+        },
+        {
+          "name": "4. Historique des appels",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/teacher/appel/historique?classe_id=1",
+              "host": ["{{base_url}}"],
+              "path": ["teacher", "appel", "historique"],
+              "query": [
+                { "key": "classe_id", "value": "1" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "5. Saisie unitaire de note",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"classe_id\": 1,\n  \"student_id\": 8,\n  \"matiere\": \"Algorithmique\",\n  \"note\": 15.5,\n  \"semestre\": \"S1\",\n  \"type_evaluation\": \"examen\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/teacher/notes",
+              "host": ["{{base_url}}"],
+              "path": ["teacher", "notes"]
+            }
+          }
+        },
+        {
+          "name": "6. Réclamations reçues",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/teacher/reclamations",
+              "host": ["{{base_url}}"],
+              "path": ["teacher", "reclamations"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "05. Espace Étudiant (/api/student)",
+      "item": [
+        {
+          "name": "1. Mon Dashboard Étudiant",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/student/dashboard",
+              "host": ["{{base_url}}"],
+              "path": ["student", "dashboard"]
+            }
+          }
+        },
+        {
+          "name": "2. Ma Prédiction IA & Conseils",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/student/prediction",
+              "host": ["{{base_url}}"],
+              "path": ["student", "prediction"]
+            }
+          }
+        },
+        {
+          "name": "3. Matières disponibles pour réclamation",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/student/matieres",
+              "host": ["{{base_url}}"],
+              "path": ["student", "matieres"]
+            }
+          }
+        },
+        {
+          "name": "4. Déposer une réclamation",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"matiere\": \"Algorithmique\",\n  \"sujet\": \"Vérification note Examen S1\",\n  \"message\": \"Bonjour Monsieur, ma note affichée semble différer de celle sur ma copie.\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/student/reclamations",
+              "host": ["{{base_url}}"],
+              "path": ["student", "reclamations"]
+            }
+          }
+        },
+        {
+          "name": "5. Mes alertes de risque pédagogique",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/student/alertes",
+              "host": ["{{base_url}}"],
+              "path": ["student", "alertes"]
+            }
+          }
+        },
+        {
+          "name": "6. Demander une séance de rattrapage",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"matiere\": \"Algorithmique\",\n  \"motif\": \"Besoin de renforcement sur les pointeurs\",\n  \"date_souhaitee\": \"2026-09-22\",\n  \"heure_souhaitee\": \"15:00\",\n  \"message\": \"Disponible les mercredis après-midi.\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/student/rattrapages",
+              "host": ["{{base_url}}"],
+              "path": ["student", "rattrapages"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "06. Gestion des Notes & Grilles (/api/grades)",
+      "item": [
+        {
+          "name": "1. Charger la grille de notes d'une classe",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/grades/class-students?classe_id=1&matiere=Algorithmique&semestre=S1&type_evaluation=examen",
+              "host": ["{{base_url}}"],
+              "path": ["grades", "class-students"],
+              "query": [
+                { "key": "classe_id", "value": "1" },
+                { "key": "matiere", "value": "Algorithmique" },
+                { "key": "semestre", "value": "S1" },
+                { "key": "type_evaluation", "value": "examen" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "2. Enregistrement en lot (Grille entière)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"classe_id\": 1,\n  \"matiere\": \"Algorithmique\",\n  \"semestre\": \"S1\",\n  \"type_evaluation\": \"examen\",\n  \"notes\": [\n    { \"student_id\": 8, \"note\": 16.0 },\n    { \"student_id\": 9, \"note\": 13.0 }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/grades/batch-save",
+              "host": ["{{base_url}}"],
+              "path": ["grades", "batch-save"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "07. Module Technicien & Affectations (/api/technicien)",
+      "item": [
+        {
+          "name": "1. Dashboard Technicien",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/technicien/dashboard",
+              "host": ["{{base_url}}"],
+              "path": ["technicien", "dashboard"]
+            }
+          }
+        },
+        {
+          "name": "2. Audit anti-doublons des affectations",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/technicien/assignments/audit",
+              "host": ["{{base_url}}"],
+              "path": ["technicien", "assignments", "audit"]
+            }
+          }
+        },
+        {
+          "name": "3. Catalogue des Matières",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/technicien/matieres",
+              "host": ["{{base_url}}"],
+              "path": ["technicien", "matieres"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

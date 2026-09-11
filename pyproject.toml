@@ -1,0 +1,15 @@
+[tool.pyright]
+include = ["backend"]
+extraPaths = ["backend", "backend/app"]
+venvPath = "backend"
+venv = "venv"
+typeCheckingMode = "off"
+reportCallIssue = false
+reportArgumentType = false
+reportGeneralTypeIssues = false
+reportOptionalMemberAccess = false
+reportAttributeAccessIssue = false
+reportMissingImports = false
+
+[tool.pyrefly]
+typeCheckingMode = "off"
