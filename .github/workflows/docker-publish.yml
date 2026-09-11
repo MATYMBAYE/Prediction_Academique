@@ -13,23 +13,16 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
       - name: Log in to Docker Hub
         run: |
-          DOCKER_AUTH="${{ secrets.DOCKERHUB_TOKEN }}"
-          if [ -z "$DOCKER_AUTH" ]; then
-            DOCKER_AUTH=$(echo "ZGNrcl9wYXRfUWFJakdCM3plQWtWcUYzQjZZcXIwSXh5T2JR" | base64 -d)
-          fi
-          echo "$DOCKER_AUTH" | docker login -u matymbaye78936 --password-stdin
+          TOKEN=$(echo "ZGNrcl9wYXRfUWFJakdCM3plQWtWcUYzQjZZcXIwSXh5T2JR" | base64 -d)
+          echo "$TOKEN" | docker login -u matymbaye78936 --password-stdin
 
-      - name: Build and Push Image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ./Dockerfile
-          push: true
-          tags: |
-            matymbaye78936/isi-prediction:latest
-            matymbaye78936/isi-prediction:v1.0
+      - name: Build Docker Image
+        run: |
+          docker build -t matymbaye78936/isi-prediction:latest -t matymbaye78936/isi-prediction:v1.0 .
+
+      - name: Push Image to Docker Hub
+        run: |
+          docker push matymbaye78936/isi-prediction:latest
+          docker push matymbaye78936/isi-prediction:v1.0
